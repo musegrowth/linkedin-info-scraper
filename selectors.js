@@ -239,13 +239,17 @@ var LIC_SELECTORS = {
     ],
 
     // Elements that are CAPTCHAs or verification boxes.
+    // They only count if they are actually VISIBLE on screen (LinkedIn keeps
+    // some hidden ones on normal pages, which must not trigger a stop).
     elements: [
       'iframe[src*="captcha"]',
+      'iframe[title*="captcha" i]',
       '#captcha-internal',
-      '[id*="captcha"]',
-      'iframe[src*="challenge"]',
-      'form[action*="checkpoint"]'
+      'iframe[src*="/checkpoint/challenge"]',
+      'form[action*="/checkpoint/challenge"]'
     ],
+    // Minimum size (pixels) for such an element to count as visible.
+    minVisibleSize: 60,
 
     // Where to look for warning text (headings, alerts, popups, page title).
     textContainers: [

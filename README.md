@@ -40,6 +40,7 @@ If you change any file later (for example `selectors.js`), go back to `chrome://
 ### What happens after Start
 
 **Phase 1 (Collecting inbox):**
+- If you are already on the Messages page, it starts right there. **The page is not reloaded.**
 - It scrolls the conversation list slowly (random amount, then a random 2–5 s wait).
 - It opens each conversation for 3–7 s (random) to find the person's profile link in the header.
 - Group chats and sponsored or LinkedIn system messages are marked **skipped** and never visited.
@@ -146,10 +147,10 @@ Everything is stored only on your computer in `chrome.storage.local`. Nothing is
 ## 7. How each situation is handled (test walkthrough)
 
 1. **Fresh start, empty cache.** Start sends the tab to `/messaging/`, collects the inbox, then switches to profiles after one random 25–90 s wait.
-2. **Pause during the inbox scroll, then resume.** Every conversation is saved as soon as it is read. On Start, the inbox reloads and is scrolled again. Conversations already handled are passed by **without being opened again**, and new ones are picked up from where it stopped.
+2. **Pause during the inbox scroll, then resume.** Every conversation is saved as soon as it is read. On Start, it continues on the open Messages page without reloading and scrolls the list again. Conversations already handled are passed by **without being opened again**, and new ones are picked up from where it stopped.
 3. **Pause during profiles, resume the next day.** The profile being read when you paused stays `pending` and is read again first. The daily count resets because the date changed.
 4. **Daily limit reached.** The tool checks after every profile and on Start, then stops with "Daily limit reached. Resume tomorrow."
-5. **Security check page.** This is caught three ways: by the page address (login, checkpoint, authwall), by CAPTCHA elements, and by warning text in headings, alerts, popups, or short error pages. The tool stops at once and shows a red warning.
+5. **Security check page.** This is caught three ways: by the page address (login, checkpoint, authwall), by CAPTCHA boxes that are actually visible on screen (hidden ones are ignored), and by warning text in headings, alerts, popups, or short error pages. The tool stops at once and shows a red warning.
 6. **Profile fails to load.** If the name doesn't appear within 20 s, if LinkedIn sends the tab to a different page, or if there's no answer within 4 minutes, the profile is marked `failed`. After 3 in a row the tool stops with a warning.
 7. **Clear cache, then start fresh.** Asks for confirmation, stops any run, and deletes the queue and data. The daily-limit setting and today's and this hour's counters are kept for safety.
 8. **Export CSV.** With 0 profiles you get a file with only the column names. With many profiles you get one row per conversation (done, pending, skipped, failed), in UTF-8 with BOM so non-English names display correctly in Excel. Cells that start with `=`, `+`, `-` or `@` get a leading `'` so Excel doesn't run them as formulas.

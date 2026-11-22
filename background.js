@@ -226,18 +226,46 @@ async function navigate(s, url) {
   }
 }
 
+// Tells the already-open page to start working, without reloading it.
+// If the page has no live copy of content.js (e.g. the extension was just
+// reloaded), a fresh copy is added to the page — still no reload.
+async function kickPageInPlace(tabId) {
+  try {
+    await chrome.tabs.sendMessage(tabId, { type: 'KICK' });
+    return true;
+  } catch (e) {
+    // No listener in the page → inject the scripts. On load, content.js
+    // asks for its job by itself.
+  }
+  try {
+    await chrome.scripting.executeScript({ target: { tabId }, files: ['selectors.js', 'content.js'] });
+    return true;
+  } catch (e) {
+    console.warn('[Collector] Could not add the script to the page:', e);
+    return false;
+  }
+}
+
 // Does the next step of the job.
 async function advance(s) {
   s.nextActionAt = 0;
   s.nextActionType = '';
   if (s.status !== 'running') return saveState(s);
 
-  // Phase 1: the inbox list is not finished yet → (re)open the inbox.
+  // Phase 1: the inbox list is not finished yet.
   if (!s.inboxDone) {
     s.phase = 'inbox';
-    s.activity = 'Opening the inbox…';
+    s.activity = 'Starting on the inbox…';
     await saveState(s);
     await chrome.alarms.create('watchdog', { delayInMinutes: WATCHDOG_INBOX_MIN });
+
+    // Already on the Messages page? Work right there — do NOT reload it.
+    let tabUrl = '';
+    try { tabUrl = (await chrome.tabs.get(s.workTabId)).url || ''; } catch (e) { tabUrl = ''; }
+    if (isMessagingUrl(tabUrl)) {
+      if (await kickPageInPlace(s.workTabId)) return;
+    }
+    // Otherwise open the inbox.
     return navigate(s, MESSAGING_URL);
   }
 

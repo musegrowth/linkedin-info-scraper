@@ -12,8 +12,12 @@
  * All "where to look" rules come from selectors.js (LIC_SELECTORS).
  */
 (function () {
-  if (window.__licCollectorLoaded) return;
-  window.__licCollectorLoaded = true;
+  // Run only once per page. (If the extension was reloaded, the old copy is
+  // "dead" — chrome.runtime.id is gone — so a fresh copy may take over.)
+  if (window.__licCollectorAlive && window.__licCollectorAlive()) return;
+  window.__licCollectorAlive = () => {
+    try { return !!(chrome.runtime && chrome.runtime.id); } catch (e) { return false; }
+  };
 
   const S = LIC_SELECTORS;
   const LOG = '[Collector]';
@@ -30,11 +34,18 @@
     stopListeners.clear();
   }
 
-  // The background tells us to stop (Pause pressed, limit reached, ...).
+  // Messages from the background:
+  //  ABORT → stop what you are doing (Pause pressed, limit reached, ...)
+  //  KICK  → Start was pressed while this page is already open: begin work
+  //          right here, WITHOUT reloading the page.
   chrome.runtime.onMessage.addListener((msg) => {
-    if (msg && msg.type === 'ABORT') {
+    if (!msg) return;
+    if (msg.type === 'ABORT') {
       console.log(LOG, 'Stop requested.');
       stopNow();
+    } else if (msg.type === 'KICK') {
+      console.log(LOG, 'Start pressed — working on this page without reloading.');
+      requestTask();
     }
   });
 
@@ -164,6 +175,18 @@
 
   /* ---------------------------- Security checks ------------------------- */
 
+  // True only if the element is shown on screen at a real size
+  // (not hidden, not 0×0, not invisible).
+  function isReallyVisible(el) {
+    if (!el || !el.isConnected) return false;
+    const r = el.getBoundingClientRect();
+    const min = S.security.minVisibleSize || 60;
+    if (r.width < min || r.height < min) return false;
+    const st = getComputedStyle(el);
+    if (st.display === 'none' || st.visibility === 'hidden' || parseFloat(st.opacity) === 0) return false;
+    return el.offsetParent !== null || st.position === 'fixed';
+  }
+
   // Returns a short description if the page looks like a CAPTCHA, login,
   // verification, restriction or rate-limit page. Otherwise ''.
   function detectSecurityCheck() {
@@ -173,7 +196,13 @@
         if (re.test(path)) return 'page: ' + path;
       }
       for (const sel of S.security.elements) {
-        if (document.querySelector(sel)) return 'CAPTCHA / verification box on the page';
+        let els = [];
+        try { els = Array.from(document.querySelectorAll(sel)); } catch (e) { continue; }
+        const visible = els.find(isReallyVisible);
+        if (visible) {
+          console.warn(LOG, 'Visible verification element matched selector:', sel, visible);
+          return 'CAPTCHA / verification box on the page';
+        }
       }
       const pieces = [document.title];
       document.querySelectorAll(S.security.textContainers.join(',')).forEach((el, i) => {
@@ -652,10 +681,24 @@
 
   /* ---------------------------- Start-up -------------------------------- */
 
-  async function onPageReady() {
+  let taskRunning = false;
+
+  // Asks the background "is there a job for this tab?" and does it.
+  // Called when the page loads, and again (KICK) when Start is pressed
+  // while this page is already open.
+  async function requestTask() {
+    // If an earlier job on this page was just stopped, let it finish stopping.
+    const until = Date.now() + 15000;
+    while (taskRunning && Date.now() < until) {
+      await new Promise((r) => setTimeout(r, 200));
+    }
+    if (taskRunning) return;
+    stopped = false;
+
     const res = await send({ type: 'PAGE_READY', url: location.href, security: detectSecurityCheck() });
     if (!res || !res.task) return; // not the work tab, or not running
 
+    taskRunning = true;
     try {
       if (res.task === 'INBOX') await runInbox(res);
       else if (res.task === 'PROFILE') await runProfile(res);
@@ -670,8 +713,10 @@
       } else {
         await send({ type: 'INBOX_ERROR', runId: res.runId, error: 'Inbox error: ' + e.message + '. Press Start to continue.' });
       }
+    } finally {
+      taskRunning = false;
     }
   }
 
-  onPageReady();
+  requestTask();
 })();

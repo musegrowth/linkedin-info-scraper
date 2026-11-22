@@ -3,7 +3,7 @@
   "name": "LinkedIn Inbox Profile Collector",
   "version": "1.0.0",
   "description": "Personal tool: slowly collects the visible profile details of people in your own LinkedIn inbox. Exports CSV.",
-  "permissions": ["storage", "alarms", "downloads", "unlimitedStorage"],
+  "permissions": ["storage", "alarms", "downloads", "unlimitedStorage", "scripting"],
   "host_permissions": ["https://www.linkedin.com/*"],
   "background": {
     "service_worker": "background.js"
