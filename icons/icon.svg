@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Source drawing for the extension icon. The PNG files next to this are made from it. -->
+  <!-- Blue rounded square -->
+  <rect x="4" y="4" width="120" height="120" rx="24" fill="#0a66c2"/>
+  <!-- White "in" -->
+  <g fill="#fff" transform="translate(6 4) scale(0.86)">
+    <circle cx="36" cy="34" r="11"/>
+    <rect x="26" y="52" width="20" height="56" rx="2.5"/>
+    <path d="M58 52h19v8.5c4.2-6.6 11.2-10.4 20.5-10.4C112 50.1 120 59.5 120 76v32h-20V79.5c0-8.3-3.2-12.7-10-12.7-7.5 0-12 5.2-12 13.4V108H58z"/>
+  </g>
+  <!-- Badge: white circle with a blue download arrow -->
+  <g id="badge">
+    <circle cx="99" cy="99" r="25" fill="#fff"/>
+    <circle cx="99" cy="99" r="19" fill="#0a66c2"/>
+    <path d="M99 88v17M91.5 98.5 99 106l7.5-7.5" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M90 111h18" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
+  </g>
+</svg>

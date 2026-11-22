@@ -141,6 +141,7 @@ If a profile fails because of a layout change, press **Retry failed** (SETTINGS 
 | `content.js` | Runs inside LinkedIn pages: scrolls, reads, detects security checks |
 | `selectors.js` | **All** page "where to look" rules (edit this when LinkedIn changes) |
 | `popup.html` / `popup.css` / `popup.js` | The small control window |
+| `icons/` | Toolbar icon (`icon.svg` is the editable drawing; the PNGs are made from it) |
 
 Everything is stored only on your computer in `chrome.storage.local`. Nothing is sent anywhere.
 

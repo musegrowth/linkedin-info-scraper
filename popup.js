@@ -238,22 +238,6 @@ function buildCsv(queue) {
   return toCsv([CSV_COLUMNS, ...rows]);
 }
 
-// "Names + links only" mode file: contacts with a link, 4 columns.
-const SIMPLE_COLUMNS = ['Name', 'Profile URL', 'Conversation URL', 'Last Message Date'];
-
-function buildSimpleCsv(queue) {
-  const rows = queue
-    .filter((i) => i.profileUrl)
-    // If the profile was visited (Full mode), use the readable "main" URL found there.
-    .map((i) => [
-      (i.data && i.data.name) || i.name,
-      (i.data && i.data.profileUrl) || i.profileUrl,
-      i.conversationUrl,
-      i.lastMessageDate
-    ]);
-  return { csv: toCsv([SIMPLE_COLUMNS, ...rows]), count: rows.length };
-}
-
 // Two columns only: Name, Profile URL.
 function buildNameLinkCsv(queue) {
   const rows = queue
