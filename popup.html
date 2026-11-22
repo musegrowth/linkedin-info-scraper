@@ -35,8 +35,16 @@
     <button id="retryBtn">Retry failed</button>
   </div>
 
-  <!-- Setting -->
+  <!-- Settings -->
   <div class="setting">
+    <label for="modeSelect">Mode:</label>
+    <select id="modeSelect">
+      <option value="full">Full (visit each profile)</option>
+      <option value="linksOnly">Names + links only</option>
+    </select>
+  </div>
+  <div id="modeHint" class="muted mode-hint"></div>
+  <div class="setting" id="limitRow">
     <label for="limitInput">Daily limit (max 80):</label>
     <input id="limitInput" type="number" min="1" max="80" step="1" value="40" />
   </div>

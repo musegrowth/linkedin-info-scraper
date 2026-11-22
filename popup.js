@@ -39,6 +39,8 @@ function render(state) {
   const settings = s.settings || {};
   const limit = Math.min(parseInt(settings.dailyLimit, 10) || 40, HARD_MAX_DAILY_LIMIT);
 
+  const linksOnly = settings.mode === 'linksOnly';
+
   // Status line
   let status = 'Idle';
   if (s.status === 'running') status = s.phase === 'profiles' && s.inboxDone ? 'Visiting profiles' : 'Collecting inbox';
@@ -78,8 +80,13 @@ function render(state) {
   const count = (st) => queue.filter((i) => i.status === st).length;
   $('inboxLine').textContent =
     'Inbox: ' + queue.length + ' found' + (queue.length ? (s.inboxDone ? ' (complete)' : ' (still collecting)') : '');
-  $('profilesLine').textContent =
-    'Profiles: ' + count('done') + ' done, ' + count('pending') + ' left, ' + count('skipped') + ' skipped, ' + count('failed') + ' failed';
+  if (linksOnly) {
+    const withLink = queue.filter((i) => i.profileUrl).length;
+    $('profilesLine').textContent = 'Contacts with profile link: ' + withLink + ' (' + count('skipped') + ' skipped)';
+  } else {
+    $('profilesLine').textContent =
+      'Profiles: ' + count('done') + ' done, ' + count('pending') + ' left, ' + count('skipped') + ' skipped, ' + count('failed') + ' failed';
+  }
 
   const today = s.daily && s.daily.date === todayStr() ? s.daily.count : 0;
   $('todayLine').textContent = today + ' of ' + limit + ' today';
@@ -91,6 +98,17 @@ function render(state) {
   $('startBtn').disabled = running;
   $('pauseBtn').disabled = !running;
   $('retryBtn').disabled = count('failed') === 0;
+
+  // Mode selector (cannot be changed while running)
+  if (document.activeElement !== $('modeSelect')) $('modeSelect').value = linksOnly ? 'linksOnly' : 'full';
+  $('modeSelect').disabled = running;
+  $('modeHint').textContent = linksOnly
+    ? 'Stays on the Messages page. Saves only name + profile link. No profiles are opened.'
+    : 'Collects the inbox, then opens each profile slowly to read its details.';
+  // Daily/hourly limits are about profile visits, so they only matter in Full mode.
+  $('limitRow').style.display = linksOnly ? 'none' : '';
+  $('todayLine').style.display = linksOnly ? 'none' : '';
+  $('hourLine').style.display = linksOnly ? 'none' : '';
 
   // Daily limit box (do not overwrite while you are typing in it)
   if (document.activeElement !== $('limitInput')) $('limitInput').value = limit;
@@ -128,6 +146,18 @@ function csvCell(value) {
   return '"' + v.replace(/"/g, '""') + '"';
 }
 
+// "Names + links only" export: just the contacts that have a profile link.
+const SIMPLE_COLUMNS = ['Name', 'Profile URL', 'Conversation URL', 'Last Message Date'];
+
+function buildSimpleCsv(queue) {
+  const rows = queue
+    .filter((i) => i.profileUrl)
+    .map((i) => [(i.data && i.data.name) || i.name, i.profileUrl, i.conversationUrl, i.lastMessageDate]);
+  const lines = [SIMPLE_COLUMNS, ...rows].map((r) => r.map(csvCell).join(','));
+  // \uFEFF = BOM so Excel reads UTF-8 names correctly.
+  return { csv: '\uFEFF' + lines.join('\r\n') + '\r\n', count: rows.length };
+}
+
 function buildCsv(queue) {
   const rows = queue.map((i) => {
     const d = i.data || {};
@@ -149,19 +179,28 @@ function buildCsv(queue) {
     ];
   });
   const lines = [CSV_COLUMNS, ...rows].map((r) => r.map(csvCell).join(','));
-  // ﻿ = "BOM": tells Excel the file is UTF-8, so names in any language show correctly.
-  return '﻿' + lines.join('\r\n') + '\r\n';
+  // \uFEFF = "BOM": tells Excel the file is UTF-8, so names in any language show correctly.
+  return '\uFEFF' + lines.join('\r\n') + '\r\n';
 }
 
 async function exportCsv() {
   const { state } = await chrome.storage.local.get('state');
   const queue = (state && state.queue) || [];
-  const csv = buildCsv(queue);
+  const linksOnly = !!(state && state.settings && state.settings.mode === 'linksOnly');
+  const simple = linksOnly ? buildSimpleCsv(queue) : null;
+  const csv = linksOnly ? simple.csv : buildCsv(queue);
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const stamp = new Date().toLocaleString('sv-SE').replace(/[: ]/g, '-').slice(0, 16);
   try {
-    await chrome.downloads.download({ url, filename: 'linkedin-profiles-' + stamp + '.csv' });
+    const prefix = linksOnly ? 'linkedin-contacts-links-' : 'linkedin-profiles-';
+    await chrome.downloads.download({ url, filename: prefix + stamp + '.csv' });
+    if (linksOnly) {
+      showMessage(simple.count
+        ? 'Exported ' + simple.count + ' contacts (name + profile link).'
+        : 'Exported an empty file (only the column names). Nothing collected yet.');
+      return;
+    }
     const done = queue.filter((i) => i.status === 'done').length;
     showMessage(queue.length
       ? 'Exported ' + queue.length + ' rows (' + done + ' profiles scraped).'
@@ -198,6 +237,16 @@ $('clearBtn').addEventListener('click', async () => {
   if (!confirm('Are you sure? This deletes all saved progress and data.')) return;
   await send({ type: 'CLEAR_CACHE' });
   showMessage('Cache cleared. (Today\'s count is kept so the daily limit still applies.)');
+  refresh();
+});
+
+$('modeSelect').addEventListener('change', async () => {
+  const res = await send({ type: 'SET_MODE', value: $('modeSelect').value });
+  if (res && res.ok) {
+    showMessage(res.value === 'linksOnly' ? 'Mode: Names + links only.' : 'Mode: Full (visit each profile).');
+  } else {
+    showMessage((res && res.message) || 'Could not change the mode.');
+  }
   refresh();
 });
 

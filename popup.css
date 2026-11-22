@@ -125,6 +125,18 @@ button.danger:hover {
   border-radius: 4px;
 }
 
+.setting select {
+  width: 170px;
+  padding: 4px;
+  border: 1px solid #a8b4be;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.mode-hint {
+  margin: -4px 0 8px;
+}
+
 .message {
   min-height: 16px;
   font-size: 12px;

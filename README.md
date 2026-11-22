@@ -37,6 +37,15 @@ If you change any file later (for example `selectors.js`), go back to `chrome://
 6. Next day, open LinkedIn, click the icon, and press **Start** again. It continues where it stopped.
 7. Press **Export CSV** whenever you want the results.
 
+### Choose a mode (in the popup, before pressing Start)
+
+| Mode | What it does |
+|---|---|
+| **Full (visit each profile)** | Collects the inbox, then opens each profile slowly and saves all its details. |
+| **Names + links only** | Collects only each contact's **name and profile link** from the inbox. **No profile pages are opened**, and the tab stays on the Messages page. Much faster and lighter. Export CSV then gives a simple file: Name, Profile URL, Conversation URL, Last Message Date. |
+
+You can only change the mode while the tool is not running. If you used "Names + links only" and later want the full details, switch to **Full** and press Start. It continues with the profile visits without collecting the inbox again.
+
 ### What happens after Start
 
 **Phase 1 (Collecting inbox):**
@@ -67,7 +76,8 @@ If you change any file later (for example `selectors.js`), go back to `chrome://
 |---|---|
 | **Start** | Starts or continues (must be pressed while a LinkedIn tab is active) |
 | **Pause** | Stops right away. Progress is saved. |
-| **Export CSV** | Downloads all rows (every status) |
+| **Export CSV** | Full mode: all rows, all columns. Names + links mode: name + profile link of each contact. |
+| Mode | Full / Names + links only (see above) |
 | **Retry failed** | Puts `failed` profiles back into the queue |
 | **Clear cache** | Deletes all saved progress and data (asks first) |
 | Daily limit | Default 40, max 80 |

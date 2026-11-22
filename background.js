@@ -118,7 +118,9 @@ function defaultState() {
     profilesSinceBreak: 0,
     breakEvery: randInt(LONG_BREAK_EVERY[0], LONG_BREAK_EVERY[1]),
 
-    settings: { dailyLimit: DEFAULT_DAILY_LIMIT },
+    // mode: 'full'      → collect inbox, then visit every profile
+    //       'linksOnly' → only collect names + profile links from the inbox
+    settings: { dailyLimit: DEFAULT_DAILY_LIMIT, mode: 'full' },
     daily: { date: todayStr(), count: 0 },
     hourly: []         // timestamps of profile visits in the last hour
   };
@@ -127,7 +129,7 @@ function defaultState() {
 async function loadState() {
   const { state } = await chrome.storage.local.get('state');
   const s = Object.assign(defaultState(), state || {});
-  s.settings = Object.assign({ dailyLimit: DEFAULT_DAILY_LIMIT }, s.settings || {});
+  s.settings = Object.assign({ dailyLimit: DEFAULT_DAILY_LIMIT, mode: 'full' }, s.settings || {});
   // New day → reset the daily counter.
   if (!s.daily || s.daily.date !== todayStr()) s.daily = { date: todayStr(), count: 0 };
   // Keep only visits from the last 60 minutes.
@@ -137,6 +139,10 @@ async function loadState() {
 
 async function saveState(s) {
   await chrome.storage.local.set({ state: s });
+}
+
+function isLinksOnly(s) {
+  return s.settings && s.settings.mode === 'linksOnly';
 }
 
 function dailyLimit(s) {
@@ -271,6 +277,7 @@ async function advance(s) {
 
   // Phase 2: visit the next pending profile.
   s.phase = 'profiles';
+  if (isLinksOnly(s)) return haltRun(s, 'finished', 'Names + links only mode: no profiles are visited. Press Export CSV.');
   if (s.daily.count >= dailyLimit(s)) return haltRun(s, 'stopped', DAILY_LIMIT_MESSAGE);
 
   const hw = hourlyWaitMs(s);
@@ -360,6 +367,14 @@ async function startRun(s, tabId) {
   }
   if (!isLinkedInUrl(tab.url)) {
     return { ok: false, message: 'Open https://www.linkedin.com/messaging/ in this tab first, then press Start.' };
+  }
+
+  if (s.inboxDone && isLinksOnly(s)) {
+    return {
+      ok: false,
+      message: 'Names + links are already collected. Press Export CSV. ' +
+        '(To also visit profiles, switch Mode to "Full", or Clear cache to collect the inbox again.)'
+    };
   }
 
   if (s.inboxDone) {
@@ -514,6 +529,12 @@ async function onInboxDone(s, msg, sender) {
   s.inboxDone = true;
   s.phase = 'profiles';
   s.profilesSinceBreak = 0;
+  // "Names + links only" mode: we are done — no profile pages are opened.
+  if (isLinksOnly(s)) {
+    const withLink = s.queue.filter((i) => i.profileUrl).length;
+    await haltRun(s, 'finished', 'Inbox collected: ' + withLink + ' contacts with profile links. Press Export CSV.');
+    return { ok: true };
+  }
   // Wait a normal random gap before the first profile.
   return scheduleNext(s).then(() => ({ ok: true }));
 }
@@ -604,6 +625,16 @@ async function handleMessage(msg, sender) {
     }
     case 'CLEAR_CACHE':
       return clearCache(s);
+    case 'SET_MODE': {
+      if (s.status === 'running') return { ok: false, message: 'Pause first, then change the mode.' };
+      s.settings.mode = msg.value === 'linksOnly' ? 'linksOnly' : 'full';
+      if (s.status === 'finished') {
+        s.status = 'idle';
+        s.reason = '';
+      }
+      await saveState(s);
+      return { ok: true, value: s.settings.mode };
+    }
     case 'SET_DAILY_LIMIT': {
       let n = parseInt(msg.value, 10);
       if (!n || n < 1) n = 1;
