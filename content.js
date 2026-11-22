@@ -289,7 +289,7 @@
     return (s || '')
       .toLowerCase()
       .normalize('NFKD')
-      .replace(/[̀-ͯ]/g, '')
+      .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^\p{L}\p{N} ]/gu, ' ')
       .replace(/\s+/g, ' ')
       .trim();

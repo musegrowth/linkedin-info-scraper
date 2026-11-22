@@ -2,63 +2,110 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>LinkedIn Inbox Profile Collector</title>
+  <title>LinkedIn Inbox Collector</title>
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
-  <h1>Inbox Profile Collector</h1>
 
-  <!-- What the tool is doing right now -->
-  <div class="status-box">
-    <div id="status" class="status">Idle</div>
+  <!-- Header: name + status badge -->
+  <header class="top">
+    <div class="brand">
+      <span class="logo">in</span>
+      <div>
+        <div class="title">Inbox Collector</div>
+        <div class="subtitle">Your LinkedIn contacts → CSV</div>
+      </div>
+    </div>
+    <span id="statusPill" class="pill idle"><span class="dot"></span><span id="statusText">Idle</span></span>
+  </header>
+
+  <!-- Warning banner (security check, failures, daily limit) -->
+  <div id="warning" class="banner hidden"></div>
+
+  <!-- What is happening right now -->
+  <div id="nowCard" class="now hidden">
     <div id="activity" class="activity"></div>
+    <div id="countdown" class="countdown hidden"></div>
   </div>
 
-  <!-- Red/yellow warning (security check, failures) -->
-  <div id="warning" class="warning hidden"></div>
+  <!-- First-time help -->
+  <section id="getStarted" class="card steps hidden">
+    <div class="card-title">How to start</div>
+    <ol>
+      <li>Open your <b>LinkedIn Messages</b> page</li>
+      <li>Choose <b>what to collect</b> below</li>
+      <li>Press <b>Start</b>, and leave the tab open</li>
+    </ol>
+    <button id="openMessagesBtn" class="secondary small hidden">Open LinkedIn Messages</button>
+  </section>
 
-  <!-- Numbers -->
-  <div class="stats">
-    <div id="inboxLine">Inbox: 0 found</div>
-    <div id="profilesLine">Profiles: 0 done, 0 left, 0 skipped, 0 failed</div>
-    <div id="todayLine">0 of 40 today</div>
-    <div id="hourLine" class="muted">This hour: 0 of 15</div>
-  </div>
+  <!-- Mode choice -->
+  <section class="card">
+    <div class="card-title">What to collect</div>
+    <div class="modes">
+      <button class="mode" id="modeLinks" data-mode="linksOnly">
+        <span class="mode-icon">🔗</span>
+        <span class="mode-name">Names + links</span>
+        <span class="mode-desc">Fast · stays on Messages</span>
+      </button>
+      <button class="mode" id="modeFull" data-mode="full">
+        <span class="mode-icon">👤</span>
+        <span class="mode-name">Full profiles</span>
+        <span class="mode-desc">Slow · opens each profile</span>
+      </button>
+    </div>
+    <div id="modeLock" class="hint hidden">Pause first to change this.</div>
+  </section>
 
-  <!-- Main controls -->
-  <div class="row">
-    <button id="startBtn" class="primary">Start</button>
-    <button id="pauseBtn">Pause</button>
-  </div>
-  <div class="row">
-    <button id="exportBtn">Export CSV</button>
-    <button id="retryBtn">Retry failed</button>
-  </div>
+  <!-- The one big button: Start / Continue / Pause -->
+  <button id="mainBtn" class="main-btn">▶ Start</button>
 
-  <!-- Settings -->
-  <div class="setting">
-    <label for="modeSelect">Mode:</label>
-    <select id="modeSelect">
-      <option value="full">Full (visit each profile)</option>
-      <option value="linksOnly">Names + links only</option>
-    </select>
-  </div>
-  <div id="modeHint" class="muted mode-hint"></div>
-  <div class="setting" id="limitRow">
-    <label for="limitInput">Daily limit (max 80):</label>
-    <input id="limitInput" type="number" min="1" max="80" step="1" value="40" />
-  </div>
+  <!-- Progress -->
+  <section class="card">
+    <div class="card-title">Progress</div>
+    <div class="stats">
+      <div class="stat"><div class="num" id="statFound">0</div><div class="lbl">Conversations</div></div>
+      <div class="stat"><div class="num good" id="statLinks">0</div><div class="lbl">With profile link</div></div>
+      <div class="stat"><div class="num muted" id="statSkipped">0</div><div class="lbl">Skipped</div></div>
+      <div class="stat full-only"><div class="num good" id="statDone">0</div><div class="lbl">Profiles done</div></div>
+      <div class="stat full-only"><div class="num" id="statLeft">0</div><div class="lbl">Left to visit</div></div>
+      <div class="stat full-only"><div class="num bad" id="statFailed">0</div><div class="lbl">Failed</div></div>
+    </div>
+    <div class="full-only">
+      <div class="bar"><div id="progressBar" class="bar-fill"></div></div>
+      <div class="limits">
+        <span id="todayLine">0 / 40 today</span>
+        <span id="hourLine">0 / 15 this hour</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Downloads -->
+  <section class="card">
+    <div class="card-title">Download</div>
+    <div class="row">
+      <button id="exportLinksBtn" class="secondary" title="Two columns: Name, Profile URL">⬇ Names + links</button>
+      <button id="exportBtn" class="secondary" title="All columns, all contacts">⬇ Full details</button>
+    </div>
+    <div class="hint">CSV files open in Excel or Google Sheets.</div>
+  </section>
+
+  <!-- Less-used settings and tools, folded away -->
+  <details class="card more">
+    <summary>Settings &amp; tools</summary>
+    <div class="setting">
+      <label for="limitInput">Daily profile limit <small>(max 80)</small></label>
+      <input id="limitInput" type="number" min="1" max="80" step="1" value="40" />
+    </div>
+    <div class="row">
+      <button id="retryBtn" class="ghost" title="Put failed profiles back in the queue">↻ Retry failed</button>
+      <button id="diagnoseBtn" class="ghost" title="Open one conversation first. Saves a small report file about how the page is built.">🩺 Diagnose page</button>
+    </div>
+    <button id="clearBtn" class="danger">🗑 Clear all data</button>
+  </details>
 
   <!-- Short feedback after pressing a button -->
-  <div id="message" class="message"></div>
-
-  <div class="row">
-    <button id="diagnoseBtn" title="Open one conversation first, then press this. Saves a small report file about how the page is built.">Diagnose this page</button>
-  </div>
-
-  <div class="row danger-row">
-    <button id="clearBtn" class="danger">Clear cache</button>
-  </div>
+  <div id="toast" class="toast hidden"></div>
 
   <script src="popup.js"></script>
 </body>

@@ -277,7 +277,7 @@ async function advance(s) {
 
   // Phase 2: visit the next pending profile.
   s.phase = 'profiles';
-  if (isLinksOnly(s)) return haltRun(s, 'finished', 'Names + links only mode: no profiles are visited. Press Export CSV.');
+  if (isLinksOnly(s)) return haltRun(s, 'finished', 'Names + links only mode: no profiles are visited. Click "⬇ Names + links" to download.');
   if (s.daily.count >= dailyLimit(s)) return haltRun(s, 'stopped', DAILY_LIMIT_MESSAGE);
 
   const hw = hourlyWaitMs(s);
@@ -372,8 +372,8 @@ async function startRun(s, tabId) {
   if (s.inboxDone && isLinksOnly(s)) {
     return {
       ok: false,
-      message: 'Names + links are already collected. Press Export CSV. ' +
-        '(To also visit profiles, switch Mode to "Full", or Clear cache to collect the inbox again.)'
+      message: 'Names + links are already collected. Click "⬇ Names + links" to download. ' +
+        '(To also visit profiles, choose "Full profiles". To collect the inbox again, use Settings & tools → Clear all data.)'
     };
   }
 
@@ -532,7 +532,7 @@ async function onInboxDone(s, msg, sender) {
   // "Names + links only" mode: we are done — no profile pages are opened.
   if (isLinksOnly(s)) {
     const withLink = s.queue.filter((i) => i.profileUrl).length;
-    await haltRun(s, 'finished', 'Inbox collected: ' + withLink + ' contacts with profile links. Press Export CSV.');
+    await haltRun(s, 'finished', 'Inbox collected: ' + withLink + ' contacts with profile links. Click "⬇ Names + links" to download.');
     return { ok: true };
   }
   // Wait a normal random gap before the first profile.

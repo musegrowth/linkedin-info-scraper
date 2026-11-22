@@ -30,21 +30,16 @@ If you change any file later (for example `selectors.js`), go back to `chrome://
 ## 2. How to use it
 
 1. Log in to LinkedIn in Chrome as you normally do.
-2. Open **https://www.linkedin.com/messaging/** in a tab.
-3. Click the extension icon, then press **Start**.
-4. Leave that tab open. You can use other tabs and windows. It works best if the LinkedIn tab stays **visible** (for example in its own window). Chrome slows down hidden tabs, which only makes the tool slower.
-5. Press **Pause** any time. Progress is saved.
-6. Next day, open LinkedIn, click the icon, and press **Start** again. It continues where it stopped.
-7. Press **Export CSV** whenever you want the results.
+2. Open **https://www.linkedin.com/messaging/** in a tab. (Or click the extension icon and press **Open LinkedIn Messages**.)
+3. Click the extension icon. Under **What to collect**, pick a card:
+   - **🔗 Names + links**: fast. Saves only each contact's name and profile link, and stays on the Messages page.
+   - **👤 Full profiles**: slow. Also opens each profile to read headline, company, location and contact info.
+4. Press the big **▶ Start** button.
+5. Leave that tab open. You can use other tabs and windows. It works best if the LinkedIn tab stays **visible** (for example in its own window). Chrome slows down hidden tabs, which only makes the tool slower.
+6. Press **⏸ Pause** any time. Progress is saved. Next time the big button says **▶ Continue**.
+7. Under **Download**, press **⬇ Names + links** (2 columns: Name, Profile URL) or **⬇ Full details** (all columns).
 
-### Choose a mode (in the popup, before pressing Start)
-
-| Mode | What it does |
-|---|---|
-| **Full (visit each profile)** | Collects the inbox, then opens each profile slowly and saves all its details. |
-| **Names + links only** | Collects only each contact's **name and profile link** from the inbox. **No profile pages are opened**, and the tab stays on the Messages page. Much faster and lighter. Export CSV then gives a simple file: Name, Profile URL, Conversation URL, Last Message Date. |
-
-You can only change the mode while the tool is not running. If you used "Names + links only" and later want the full details, switch to **Full** and press Start. It continues with the profile visits without collecting the inbox again.
+You can only change the mode while the tool is not running. If you collected names + links first and later want the full details, choose **Full profiles** and press Continue. It goes straight to the profile visits without collecting the inbox again.
 
 ### What happens after Start
 
@@ -64,23 +59,17 @@ You can only change the mode while the tool is not running. If you used "Names +
 
 ### The popup
 
-| Line | Meaning |
+| Part | What it shows / does |
 |---|---|
-| Status | Idle / Collecting inbox / Visiting profiles / Paused / Stopped (reason) / Finished |
-| Inbox: N found | Conversations in the list, including skipped ones |
-| Profiles: … | done / left (pending) / skipped / failed |
-| X of Y today | Profiles visited today and your daily limit |
-| This hour | Profiles visited in the last 60 minutes (max 15) |
-
-| Button | What it does |
-|---|---|
-| **Start** | Starts or continues (must be pressed while a LinkedIn tab is active) |
-| **Pause** | Stops right away. Progress is saved. |
-| **Export CSV** | Full mode: all rows, all columns. Names + links mode: name + profile link of each contact. |
-| Mode | Full / Names + links only (see above) |
-| **Retry failed** | Puts `failed` profiles back into the queue |
-| **Clear cache** | Deletes all saved progress and data (asks first) |
-| Daily limit | Default 40, max 80 |
+| Badge (top right) | Idle (grey) · Collecting inbox / Visiting profiles (green) · Paused (amber) · Stopped (red) · Finished (blue) |
+| Banner | Red = security check or repeated failures. Amber = stopped or paused, with the reason. Green = finished. |
+| Blue box | What it is doing right now, plus a countdown while it waits |
+| **What to collect** | The two mode cards (locked while running) |
+| Big button | **▶ Start** / **▶ Continue** when stopped, **⏸ Pause** when running |
+| **Progress** | Conversations found · with profile link · skipped. Full mode also shows done · left · failed, a progress bar, and today's / this hour's usage. |
+| **⬇ Names + links** | CSV with 2 columns: Name, Profile URL |
+| **⬇ Full details** | CSV with all 14 columns and every conversation |
+| **Settings & tools** (click to open) | Daily profile limit (default 40, max 80) · **↻ Retry failed** · **🩺 Diagnose page** · **🗑 Clear all data** (asks first) |
 
 ---
 
@@ -92,7 +81,7 @@ You can only change the mode while the tool is not running. If you used "Names +
 - **3 failures in a row:** if 3 profiles in a row fail to load, the tool stops and warns you.
 - **One tab only.** There are no parallel requests and no hidden LinkedIn API calls. It only reads what is visible on the page.
 - **Closing the tab** pauses the tool. Restarting Chrome or reloading the extension also pauses it; it never continues on its own after that.
-- **Clear cache** keeps today's count and this hour's count, so clearing never lets you go over the limits.
+- **Clear all data** keeps today's count and this hour's count, so clearing never lets you go over the limits.
 
 ---
 
@@ -142,7 +131,7 @@ LinkedIn changes its page design from time to time. When that happens, some fiel
 3. Save the file, go to `chrome://extensions`, and click **reload ↻** on the extension.
 4. Reload the LinkedIn tab and press **Start**.
 
-If a profile fails because of a layout change, press **Retry failed** after fixing it.
+If a profile fails because of a layout change, press **↻ Retry failed** (in Settings & tools) after fixing it.
 
 ---
 
@@ -168,8 +157,8 @@ Everything is stored only on your computer in `chrome.storage.local`. Nothing is
 4. **Daily limit reached.** The tool checks after every profile and on Start, then stops with "Daily limit reached. Resume tomorrow."
 5. **Security check page.** This is caught three ways: by the page address (login, checkpoint, authwall), by CAPTCHA boxes that are actually visible on screen (hidden ones are ignored), and by warning text in headings, alerts, popups, or short error pages. The tool stops at once and shows a red warning.
 6. **Profile fails to load.** If the name doesn't appear within 20 s, if LinkedIn sends the tab to a different page, or if there's no answer within 4 minutes, the profile is marked `failed`. After 3 in a row the tool stops with a warning.
-7. **Clear cache, then start fresh.** Asks for confirmation, stops any run, and deletes the queue and data. The daily-limit setting and today's and this hour's counters are kept for safety.
-8. **Export CSV.** With 0 profiles you get a file with only the column names. With many profiles you get one row per conversation (done, pending, skipped, failed), in UTF-8 with BOM so non-English names display correctly in Excel. Cells that start with `=`, `+`, `-` or `@` get a leading `'` so Excel doesn't run them as formulas.
+7. **Clear all data, then start fresh.** Asks for confirmation, stops any run, and deletes the queue and data. The daily-limit setting and today's and this hour's counters are kept for safety.
+8. **Download CSV.** With 0 profiles you get a file with only the column names. With many profiles you get one row per conversation (done, pending, skipped, failed), in UTF-8 with BOM so non-English names display correctly in Excel. Cells that start with `=`, `+`, `-` or `@` get a leading `'` so Excel doesn't run them as formulas.
 
 ---
 

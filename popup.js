@@ -8,9 +8,12 @@
 
 const HOURLY_LIMIT = 15;
 const HARD_MAX_DAILY_LIMIT = 80;
+const MESSAGING_URL = 'https://www.linkedin.com/messaging/';
 
 const $ = (id) => document.getElementById(id);
 let lastState = null;
+let activeTabOnLinkedIn = false;
+let toastTimer = null;
 
 function todayStr() {
   return new Date().toLocaleDateString('en-CA');
@@ -20,8 +23,17 @@ function send(msg) {
   return chrome.runtime.sendMessage(msg).catch((e) => ({ ok: false, message: String(e) }));
 }
 
+// Short message at the bottom of the popup (disappears after a few seconds).
 function showMessage(textValue) {
-  $('message').textContent = textValue || '';
+  const t = $('toast');
+  clearTimeout(toastTimer);
+  if (!textValue) {
+    t.classList.add('hidden');
+    return;
+  }
+  t.textContent = textValue;
+  t.classList.remove('hidden');
+  toastTimer = setTimeout(() => t.classList.add('hidden'), 6000);
 }
 
 function formatCountdown(ms) {
@@ -31,6 +43,10 @@ function formatCountdown(ms) {
   return m + ':' + String(s).padStart(2, '0');
 }
 
+function show(el, visible) {
+  el.classList.toggle('hidden', !visible);
+}
+
 /* ---------------------------- Drawing the popup ------------------------- */
 
 function render(state) {
@@ -38,85 +54,124 @@ function render(state) {
   const queue = s.queue || [];
   const settings = s.settings || {};
   const limit = Math.min(parseInt(settings.dailyLimit, 10) || 40, HARD_MAX_DAILY_LIMIT);
-
   const linksOnly = settings.mode === 'linksOnly';
-
-  // Status line
-  let status = 'Idle';
-  if (s.status === 'running') status = s.phase === 'profiles' && s.inboxDone ? 'Visiting profiles' : 'Collecting inbox';
-  else if (s.status === 'paused') status = 'Paused';
-  else if (s.status === 'stopped') status = 'Stopped' + (s.reason ? ': ' + s.reason : '');
-  else if (s.status === 'finished') status = 'Finished';
-  $('status').textContent = status;
-
-  // Activity line (with a live countdown while waiting)
-  let activity = '';
-  if (s.status === 'running') {
-    activity = s.activity || '';
-    if (s.nextActionAt && s.nextActionAt > Date.now()) {
-      const left = formatCountdown(s.nextActionAt - Date.now());
-      if (s.nextActionType === 'next') activity = 'Next profile in ' + left;
-      else activity = (s.activity || 'Waiting') + ' (' + left + ')';
-    }
-  } else if (s.status === 'paused' || s.status === 'finished') {
-    activity = s.reason || '';
-  }
-  $('activity').textContent = activity;
-
-  // Warning box
-  const warn = $('warning');
-  if (s.warning) {
-    warn.textContent = '⚠ ' + s.warning;
-    warn.classList.remove('hidden', 'notice');
-  } else if (s.status === 'stopped' && s.reason) {
-    warn.textContent = s.reason;
-    warn.classList.remove('hidden');
-    warn.classList.add('notice');
-  } else {
-    warn.classList.add('hidden');
-  }
-
-  // Numbers
+  const running = s.status === 'running';
   const count = (st) => queue.filter((i) => i.status === st).length;
-  $('inboxLine').textContent =
-    'Inbox: ' + queue.length + ' found' + (queue.length ? (s.inboxDone ? ' (complete)' : ' (still collecting)') : '');
-  if (linksOnly) {
-    const withLink = queue.filter((i) => i.profileUrl).length;
-    $('profilesLine').textContent = 'Contacts with profile link: ' + withLink + ' (' + count('skipped') + ' skipped)';
-  } else {
-    $('profilesLine').textContent =
-      'Profiles: ' + count('done') + ' done, ' + count('pending') + ' left, ' + count('skipped') + ' skipped, ' + count('failed') + ' failed';
+
+  /* Status badge */
+  const pill = $('statusPill');
+  let label = 'Idle';
+  let kind = 'idle';
+  if (running) {
+    kind = 'running';
+    label = s.phase === 'profiles' && s.inboxDone ? 'Visiting profiles' : 'Collecting inbox';
+  } else if (s.status === 'paused') {
+    kind = 'paused';
+    label = 'Paused';
+  } else if (s.status === 'stopped') {
+    kind = 'stopped';
+    label = 'Stopped';
+  } else if (s.status === 'finished') {
+    kind = 'finished';
+    label = 'Finished';
   }
+  pill.className = 'pill ' + kind;
+  $('statusText').textContent = label;
+
+  /* Banner: warnings, stop reasons, "finished" */
+  const banner = $('warning');
+  banner.className = 'banner';
+  if (s.warning) {
+    banner.textContent = '⚠ ' + s.warning;
+  } else if (s.status === 'stopped' && s.reason) {
+    banner.textContent = s.reason;
+    banner.classList.add('notice');
+  } else if (s.status === 'finished') {
+    banner.textContent = '✓ ' + (s.reason || 'Done.') ;
+    banner.classList.add('success');
+  } else if (s.status === 'paused' && s.reason) {
+    banner.textContent = s.reason;
+    banner.classList.add('notice');
+  } else {
+    banner.classList.add('hidden');
+  }
+
+  /* "Now" box: what it is doing + countdown */
+  const waiting = running && s.nextActionAt && s.nextActionAt > Date.now();
+  show($('nowCard'), running);
+  if (running) {
+    let activity = s.activity || 'Working…';
+    if (waiting && s.nextActionType === 'next') activity = 'Waiting a random pause before the next profile';
+    $('activity').textContent = activity;
+    show($('countdown'), !!waiting);
+    if (waiting) $('countdown').textContent = formatCountdown(s.nextActionAt - Date.now());
+  }
+
+  /* First-time help */
+  show($('getStarted'), !running && (queue.length === 0 || !activeTabOnLinkedIn));
+  show($('openMessagesBtn'), !activeTabOnLinkedIn);
+
+  /* Mode cards */
+  $('modeLinks').classList.toggle('active', linksOnly);
+  $('modeFull').classList.toggle('active', !linksOnly);
+  $('modeLinks').disabled = running;
+  $('modeFull').disabled = running;
+  show($('modeLock'), running);
+
+  /* Main button */
+  const main = $('mainBtn');
+  if (running) {
+    main.textContent = '⏸ Pause';
+    main.className = 'main-btn pause';
+  } else {
+    const hasProgress = queue.length > 0 && s.status !== 'finished';
+    main.textContent = hasProgress ? '▶ Continue' : '▶ Start';
+    main.className = 'main-btn';
+  }
+
+  /* Numbers */
+  const withLink = queue.filter((i) => i.profileUrl).length;
+  const done = count('done');
+  const left = count('pending');
+  const failed = count('failed');
+  $('statFound').textContent = queue.length;
+  $('statLinks').textContent = withLink;
+  $('statSkipped').textContent = count('skipped');
+  $('statDone').textContent = done;
+  $('statLeft').textContent = left;
+  $('statFailed').textContent = failed;
+  document.querySelectorAll('.full-only').forEach((el) => show(el, !linksOnly));
+
+  const total = done + left + failed;
+  $('progressBar').style.width = (total ? Math.round((done / total) * 100) : 0) + '%';
 
   const today = s.daily && s.daily.date === todayStr() ? s.daily.count : 0;
-  $('todayLine').textContent = today + ' of ' + limit + ' today';
   const hour = (s.hourly || []).filter((t) => Date.now() - t < 3600 * 1000).length;
-  $('hourLine').textContent = 'This hour: ' + hour + ' of ' + HOURLY_LIMIT;
+  $('todayLine').textContent = today + ' / ' + limit + ' profiles today';
+  $('todayLine').classList.toggle('over', today >= limit);
+  $('hourLine').textContent = hour + ' / ' + HOURLY_LIMIT + ' this hour';
 
-  // Buttons
-  const running = s.status === 'running';
-  $('startBtn').disabled = running;
-  $('pauseBtn').disabled = !running;
-  $('retryBtn').disabled = count('failed') === 0;
-
-  // Mode selector (cannot be changed while running)
-  if (document.activeElement !== $('modeSelect')) $('modeSelect').value = linksOnly ? 'linksOnly' : 'full';
-  $('modeSelect').disabled = running;
-  $('modeHint').textContent = linksOnly
-    ? 'Stays on the Messages page. Saves only name + profile link. No profiles are opened.'
-    : 'Collects the inbox, then opens each profile slowly to read its details.';
-  // Daily/hourly limits are about profile visits, so they only matter in Full mode.
-  $('limitRow').style.display = linksOnly ? 'none' : '';
-  $('todayLine').style.display = linksOnly ? 'none' : '';
-  $('hourLine').style.display = linksOnly ? 'none' : '';
-
-  // Daily limit box (do not overwrite while you are typing in it)
+  /* Tools */
+  $('retryBtn').disabled = failed === 0;
+  $('exportLinksBtn').disabled = withLink === 0;
+  $('exportBtn').disabled = queue.length === 0;
   if (document.activeElement !== $('limitInput')) $('limitInput').value = limit;
 }
 
 async function refresh() {
   const { state } = await chrome.storage.local.get('state');
   lastState = state || null;
+  render(lastState);
+}
+
+async function checkActiveTab() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    // The URL is only visible to us on linkedin.com pages, which is all we need.
+    activeTabOnLinkedIn = !!(tab && /^https:\/\/www\.linkedin\.com\//.test(tab.url || ''));
+  } catch (e) {
+    activeTabOnLinkedIn = false;
+  }
   render(lastState);
 }
 
@@ -137,6 +192,10 @@ const CSV_COLUMNS = [
   'Last Message Date', 'Scraped Date', 'Status'
 ];
 
+// BOM = invisible first character that tells Excel the file is UTF-8,
+// so names in any language show correctly.
+const BOM = '\uFEFF';
+
 // Makes one value safe for a CSV cell.
 function csvCell(value) {
   let v = value == null ? '' : String(value);
@@ -146,24 +205,11 @@ function csvCell(value) {
   return '"' + v.replace(/"/g, '""') + '"';
 }
 
-// "Names + links only" export: just the contacts that have a profile link.
-const SIMPLE_COLUMNS = ['Name', 'Profile URL', 'Conversation URL', 'Last Message Date'];
-
-function buildSimpleCsv(queue) {
-  const rows = queue
-    .filter((i) => i.profileUrl)
-    // If the profile was visited (Full mode), use the readable "main" URL found there.
-    .map((i) => [
-      (i.data && i.data.name) || i.name,
-      (i.data && i.data.profileUrl) || i.profileUrl,
-      i.conversationUrl,
-      i.lastMessageDate
-    ]);
-  const lines = [SIMPLE_COLUMNS, ...rows].map((r) => r.map(csvCell).join(','));
-  // \uFEFF = BOM so Excel reads UTF-8 names correctly.
-  return { csv: '\uFEFF' + lines.join('\r\n') + '\r\n', count: rows.length };
+function toCsv(rows) {
+  return BOM + rows.map((r) => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
 }
 
+// Full details: every conversation, all columns.
 function buildCsv(queue) {
   const rows = queue.map((i) => {
     const d = i.data || {};
@@ -184,85 +230,72 @@ function buildCsv(queue) {
       i.status + (i.reason && i.status !== 'done' ? ' (' + i.reason + ')' : '')
     ];
   });
-  const lines = [CSV_COLUMNS, ...rows].map((r) => r.map(csvCell).join(','));
-  // \uFEFF = "BOM": tells Excel the file is UTF-8, so names in any language show correctly.
-  return '\uFEFF' + lines.join('\r\n') + '\r\n';
+  return toCsv([CSV_COLUMNS, ...rows]);
 }
 
-async function exportCsv() {
+// "Names + links only" mode file: contacts with a link, 4 columns.
+const SIMPLE_COLUMNS = ['Name', 'Profile URL', 'Conversation URL', 'Last Message Date'];
+
+function buildSimpleCsv(queue) {
+  const rows = queue
+    .filter((i) => i.profileUrl)
+    // If the profile was visited (Full mode), use the readable "main" URL found there.
+    .map((i) => [
+      (i.data && i.data.name) || i.name,
+      (i.data && i.data.profileUrl) || i.profileUrl,
+      i.conversationUrl,
+      i.lastMessageDate
+    ]);
+  return { csv: toCsv([SIMPLE_COLUMNS, ...rows]), count: rows.length };
+}
+
+// Two columns only: Name, Profile URL.
+function buildNameLinkCsv(queue) {
+  const rows = queue
+    .filter((i) => i.profileUrl)
+    .map((i) => [(i.data && i.data.name) || i.name, (i.data && i.data.profileUrl) || i.profileUrl]);
+  return { csv: toCsv([['Name', 'Profile URL'], ...rows]), count: rows.length };
+}
+
+function fileStamp() {
+  return new Date().toLocaleString('sv-SE').replace(/[: ]/g, '-').slice(0, 16);
+}
+
+async function downloadText(content, filename, type) {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  try {
+    await chrome.downloads.download({ url, filename });
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
+  }
+}
+
+async function exportFull() {
   const { state } = await chrome.storage.local.get('state');
   const queue = (state && state.queue) || [];
-  const linksOnly = !!(state && state.settings && state.settings.mode === 'linksOnly');
-  const simple = linksOnly ? buildSimpleCsv(queue) : null;
-  const csv = linksOnly ? simple.csv : buildCsv(queue);
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const stamp = new Date().toLocaleString('sv-SE').replace(/[: ]/g, '-').slice(0, 16);
   try {
-    const prefix = linksOnly ? 'linkedin-contacts-links-' : 'linkedin-profiles-';
-    await chrome.downloads.download({ url, filename: prefix + stamp + '.csv' });
-    if (linksOnly) {
-      showMessage(simple.count
-        ? 'Exported ' + simple.count + ' contacts (name + profile link).'
-        : 'Exported an empty file (only the column names). Nothing collected yet.');
-      return;
-    }
+    await downloadText(buildCsv(queue), 'linkedin-full-details-' + fileStamp() + '.csv', 'text/csv;charset=utf-8');
     const done = queue.filter((i) => i.status === 'done').length;
     showMessage(queue.length
-      ? 'Exported ' + queue.length + ' rows (' + done + ' profiles scraped).'
-      : 'Exported an empty file (only the column names). Nothing collected yet.');
+      ? 'Downloaded ' + queue.length + ' rows (' + done + ' profiles with full details).'
+      : 'Downloaded an empty file (only the column names). Nothing collected yet.');
   } catch (e) {
-    showMessage('Export failed: ' + e.message);
+    showMessage('Download failed: ' + e.message);
   }
-  setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
 }
 
-/* ---------------------------- Buttons ----------------------------------- */
-
-$('startBtn').addEventListener('click', async () => {
-  showMessage('');
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab) return showMessage('No active tab found.');
-  const res = await send({ type: 'START', tabId: tab.id });
-  showMessage(res && res.ok ? 'Started. You can close this popup.' : (res && res.message) || 'Could not start.');
-});
-
-$('pauseBtn').addEventListener('click', async () => {
-  await send({ type: 'PAUSE' });
-  showMessage('Paused. Progress is saved.');
-});
-
-$('exportBtn').addEventListener('click', exportCsv);
-
-$('retryBtn').addEventListener('click', async () => {
-  const res = await send({ type: 'RETRY_FAILED' });
-  showMessage(res && res.ok ? res.count + ' failed item(s) moved back to the queue.' : 'Could not retry.');
-});
-
-$('clearBtn').addEventListener('click', async () => {
-  if (!confirm('Are you sure? This deletes all saved progress and data.')) return;
-  await send({ type: 'CLEAR_CACHE' });
-  showMessage('Cache cleared. (Today\'s count is kept so the daily limit still applies.)');
-  refresh();
-});
-
-$('modeSelect').addEventListener('change', async () => {
-  const res = await send({ type: 'SET_MODE', value: $('modeSelect').value });
-  if (res && res.ok) {
-    showMessage(res.value === 'linksOnly' ? 'Mode: Names + links only.' : 'Mode: Full (visit each profile).');
-  } else {
-    showMessage((res && res.message) || 'Could not change the mode.');
+async function exportNameLinks() {
+  const { state } = await chrome.storage.local.get('state');
+  const result = buildNameLinkCsv((state && state.queue) || []);
+  try {
+    await downloadText(result.csv, 'linkedin-names-links-' + fileStamp() + '.csv', 'text/csv;charset=utf-8');
+    showMessage(result.count
+      ? 'Downloaded ' + result.count + ' contacts (Name + Profile URL).'
+      : 'Downloaded an empty file. No profile links collected yet.');
+  } catch (e) {
+    showMessage('Download failed: ' + e.message);
   }
-  refresh();
-});
-
-$('limitInput').addEventListener('change', async () => {
-  const res = await send({ type: 'SET_DAILY_LIMIT', value: $('limitInput').value });
-  if (res && res.ok) {
-    $('limitInput').value = res.value;
-    showMessage('Daily limit set to ' + res.value + '.');
-  }
-});
+}
 
 /* ---------------------------- Diagnose ---------------------------------- */
 /*
@@ -312,13 +345,12 @@ function diagnosePage() {
       Object.keys(groups[g]).forEach((k) => {
         const list = groups[g][k];
         if (!Array.isArray(list)) return;
-        const counts = list.map((sel) => {
+        out(g + '.' + k + ':');
+        list.forEach((sel) => {
           let n = 0;
           try { n = deepAll(sel).length; } catch (e) { n = 'bad'; }
-          return n + ' × ' + sel;
+          out('    ' + n + ' × ' + sel);
         });
-        out(g + '.' + k + ':');
-        counts.forEach((c) => out('    ' + c));
       });
     });
     out('');
@@ -352,7 +384,7 @@ function diagnosePage() {
   return lines.join('\n');
 }
 
-$('diagnoseBtn').addEventListener('click', async () => {
+async function runDiagnose() {
   showMessage('');
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab || !/^https:\/\/www\.linkedin\.com\//.test(tab.url || '')) {
@@ -361,13 +393,74 @@ $('diagnoseBtn').addEventListener('click', async () => {
   try {
     const [res] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: diagnosePage });
     const report = (res && res.result) || 'No result.';
-    const url = URL.createObjectURL(new Blob([report], { type: 'text/plain;charset=utf-8' }));
-    await chrome.downloads.download({ url, filename: 'linkedin-diagnose-' + Date.now() + '.txt' });
-    setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
+    await downloadText(report, 'linkedin-diagnose-' + Date.now() + '.txt', 'text/plain;charset=utf-8');
     showMessage('Report saved to your Downloads folder.');
   } catch (e) {
     showMessage('Diagnose failed: ' + e.message);
   }
+}
+
+/* ---------------------------- Buttons ----------------------------------- */
+
+// The big button: Start / Continue when stopped, Pause when running.
+$('mainBtn').addEventListener('click', async () => {
+  if (lastState && lastState.status === 'running') {
+    await send({ type: 'PAUSE' });
+    showMessage('Paused. Your progress is saved.');
+    return;
+  }
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab) return showMessage('No active tab found.');
+  const res = await send({ type: 'START', tabId: tab.id });
+  showMessage(res && res.ok ? 'Started. You can close this window. It keeps working.' : (res && res.message) || 'Could not start.');
+});
+
+// Mode cards
+['modeLinks', 'modeFull'].forEach((id) => {
+  $(id).addEventListener('click', async () => {
+    const value = $(id).dataset.mode;
+    const res = await send({ type: 'SET_MODE', value });
+    if (res && res.ok) {
+      showMessage(value === 'linksOnly'
+        ? 'Names + links: collects name and profile link only. No profiles are opened.'
+        : 'Full profiles: also opens each profile slowly to read its details.');
+    } else {
+      showMessage((res && res.message) || 'Could not change the mode.');
+    }
+    refresh();
+  });
+});
+
+$('openMessagesBtn').addEventListener('click', async () => {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tab) await chrome.tabs.update(tab.id, { url: MESSAGING_URL });
+  else await chrome.tabs.create({ url: MESSAGING_URL });
+  window.close();
+});
+
+$('exportLinksBtn').addEventListener('click', exportNameLinks);
+$('exportBtn').addEventListener('click', exportFull);
+$('diagnoseBtn').addEventListener('click', runDiagnose);
+
+$('retryBtn').addEventListener('click', async () => {
+  const res = await send({ type: 'RETRY_FAILED' });
+  showMessage(res && res.ok ? res.count + ' failed profile(s) put back in the queue.' : 'Could not retry.');
+});
+
+$('clearBtn').addEventListener('click', async () => {
+  if (!confirm('Are you sure? This deletes all saved progress and data.')) return;
+  await send({ type: 'CLEAR_CACHE' });
+  showMessage('All data cleared. (Today\'s count is kept so the daily limit still applies.)');
+  refresh();
+});
+
+$('limitInput').addEventListener('change', async () => {
+  const res = await send({ type: 'SET_DAILY_LIMIT', value: $('limitInput').value });
+  if (res && res.ok) {
+    $('limitInput').value = res.value;
+    showMessage('Daily limit set to ' + res.value + ' profiles.');
+  }
 });
 
 refresh();
+checkActiveTab();
