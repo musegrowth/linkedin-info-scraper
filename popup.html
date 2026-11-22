@@ -7,8 +7,8 @@
 </head>
 <body>
 
-  <!-- Header: name + status badge -->
-  <header class="top">
+  <!-- Header band: name + status badge -->
+  <header class="hero">
     <div class="brand">
       <span class="logo">in</span>
       <div>
@@ -19,90 +19,107 @@
     <span id="statusPill" class="pill idle"><span class="dot"></span><span id="statusText">Idle</span></span>
   </header>
 
-  <!-- Warning banner (security check, failures, daily limit) -->
-  <div id="warning" class="banner hidden"></div>
+  <main class="content">
 
-  <!-- What is happening right now -->
-  <div id="nowCard" class="now hidden">
-    <div id="activity" class="activity"></div>
-    <div id="countdown" class="countdown hidden"></div>
-  </div>
+    <!-- Warning banner (security check, failures, daily limit) -->
+    <div id="warning" class="banner hidden"></div>
 
-  <!-- First-time help -->
-  <section id="getStarted" class="card steps hidden">
-    <div class="card-title">How to start</div>
-    <ol>
-      <li>Open your <b>LinkedIn Messages</b> page</li>
-      <li>Choose <b>what to collect</b> below</li>
-      <li>Press <b>Start</b>, and leave the tab open</li>
-    </ol>
-    <button id="openMessagesBtn" class="secondary small hidden">Open LinkedIn Messages</button>
-  </section>
-
-  <!-- Mode choice -->
-  <section class="card">
-    <div class="card-title">What to collect</div>
-    <div class="modes">
-      <button class="mode" id="modeLinks" data-mode="linksOnly">
-        <span class="mode-icon">🔗</span>
-        <span class="mode-name">Names + links</span>
-        <span class="mode-desc">Fast · stays on Messages</span>
-      </button>
-      <button class="mode" id="modeFull" data-mode="full">
-        <span class="mode-icon">👤</span>
-        <span class="mode-name">Full profiles</span>
-        <span class="mode-desc">Slow · opens each profile</span>
-      </button>
-    </div>
-    <div id="modeLock" class="hint hidden">Pause first to change this.</div>
-  </section>
-
-  <!-- The one big button: Start / Continue / Pause -->
-  <button id="mainBtn" class="main-btn">▶ Start</button>
-
-  <!-- Progress -->
-  <section class="card">
-    <div class="card-title">Progress</div>
-    <div class="stats">
-      <div class="stat"><div class="num" id="statFound">0</div><div class="lbl">Conversations</div></div>
-      <div class="stat"><div class="num good" id="statLinks">0</div><div class="lbl">With profile link</div></div>
-      <div class="stat"><div class="num muted" id="statSkipped">0</div><div class="lbl">Skipped</div></div>
-      <div class="stat full-only"><div class="num good" id="statDone">0</div><div class="lbl">Profiles done</div></div>
-      <div class="stat full-only"><div class="num" id="statLeft">0</div><div class="lbl">Left to visit</div></div>
-      <div class="stat full-only"><div class="num bad" id="statFailed">0</div><div class="lbl">Failed</div></div>
-    </div>
-    <div class="full-only">
-      <div class="bar"><div id="progressBar" class="bar-fill"></div></div>
-      <div class="limits">
-        <span id="todayLine">0 / 40 today</span>
-        <span id="hourLine">0 / 15 this hour</span>
+    <!-- What is happening right now -->
+    <div id="nowCard" class="now hidden">
+      <div class="now-icon">⏳</div>
+      <div class="now-text">
+        <div id="activity" class="activity"></div>
+        <div id="countdown" class="countdown hidden"></div>
       </div>
     </div>
-  </section>
 
-  <!-- Downloads -->
-  <section class="card">
-    <div class="card-title">Download</div>
-    <div class="row">
-      <button id="exportLinksBtn" class="secondary" title="Two columns: Name, Profile URL">⬇ Names + links</button>
-      <button id="exportBtn" class="secondary" title="All columns, all contacts">⬇ Full details</button>
-    </div>
-    <div class="hint">CSV files open in Excel or Google Sheets.</div>
-  </section>
+    <!-- First-time help -->
+    <section id="getStarted" class="card steps hidden">
+      <div class="card-title"><span class="ct-icon">🚀</span>How to start</div>
+      <ol class="step-list">
+        <li><span class="step-num">1</span><span>Open your <b>LinkedIn Messages</b> page</span></li>
+        <li><span class="step-num">2</span><span>Choose <b>what to collect</b> below</span></li>
+        <li><span class="step-num">3</span><span>Press <b>Start</b> and leave the tab open</span></li>
+      </ol>
+      <button id="openMessagesBtn" class="soft small hidden">Open LinkedIn Messages →</button>
+    </section>
 
-  <!-- Less-used settings and tools, folded away -->
-  <details class="card more">
-    <summary>Settings &amp; tools</summary>
-    <div class="setting">
-      <label for="limitInput">Daily profile limit <small>(max 80)</small></label>
-      <input id="limitInput" type="number" min="1" max="80" step="1" value="40" />
-    </div>
-    <div class="row">
-      <button id="retryBtn" class="ghost" title="Put failed profiles back in the queue">↻ Retry failed</button>
-      <button id="diagnoseBtn" class="ghost" title="Open one conversation first. Saves a small report file about how the page is built.">🩺 Diagnose page</button>
-    </div>
-    <button id="clearBtn" class="danger">🗑 Clear all data</button>
-  </details>
+    <!-- Mode choice -->
+    <section class="card">
+      <div class="card-title"><span class="ct-icon">🎯</span>What to collect</div>
+      <div class="modes">
+        <button class="mode" id="modeLinks" data-mode="linksOnly">
+          <span class="mode-check">✓</span>
+          <span class="mode-icon blue">🔗</span>
+          <span class="mode-name">Names + links</span>
+          <span class="mode-desc">Fast · stays on Messages</span>
+        </button>
+        <button class="mode" id="modeFull" data-mode="full">
+          <span class="mode-check">✓</span>
+          <span class="mode-icon purple">👤</span>
+          <span class="mode-name">Full profiles</span>
+          <span class="mode-desc">Slow · opens each profile</span>
+        </button>
+      </div>
+      <div id="modeLock" class="hint hidden">🔒 Pause first to change this.</div>
+    </section>
+
+    <!-- The one big button: Start / Continue / Pause -->
+    <button id="mainBtn" class="main-btn">▶ Start</button>
+
+    <!-- Progress -->
+    <section class="card">
+      <div class="card-title"><span class="ct-icon">📊</span>Progress</div>
+      <div class="stats">
+        <div class="stat accent-blue"><div class="num" id="statFound">0</div><div class="lbl">Conversations</div></div>
+        <div class="stat accent-green"><div class="num" id="statLinks">0</div><div class="lbl">With profile link</div></div>
+        <div class="stat accent-gray"><div class="num" id="statSkipped">0</div><div class="lbl">Skipped</div></div>
+        <div class="stat accent-green full-only"><div class="num" id="statDone">0</div><div class="lbl">Profiles done</div></div>
+        <div class="stat accent-blue full-only"><div class="num" id="statLeft">0</div><div class="lbl">Left to visit</div></div>
+        <div class="stat accent-red full-only"><div class="num" id="statFailed">0</div><div class="lbl">Failed</div></div>
+      </div>
+      <div class="full-only">
+        <div class="bar-head"><span>Profiles visited</span><span id="progressPct">0%</span></div>
+        <div class="bar"><div id="progressBar" class="bar-fill"></div></div>
+        <div class="limits">
+          <span id="todayLine">0 / 40 today</span>
+          <span id="hourLine">0 / 15 this hour</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Downloads -->
+    <section class="card">
+      <div class="card-title"><span class="ct-icon">📥</span>Download</div>
+      <div class="downloads">
+        <button id="exportLinksBtn" class="dl" title="Two columns: Name, Profile URL">
+          <span class="dl-icon">⬇</span>
+          <span class="dl-text"><b>Names + links</b><small>2 columns</small></span>
+        </button>
+        <button id="exportBtn" class="dl" title="All columns, all contacts">
+          <span class="dl-icon">⬇</span>
+          <span class="dl-text"><b>Full details</b><small>All columns</small></span>
+        </button>
+      </div>
+      <div class="hint">CSV files open in Excel or Google Sheets.</div>
+    </section>
+
+    <!-- Less-used settings and tools, folded away -->
+    <details class="card more">
+      <summary><span class="ct-icon">⚙️</span>Settings &amp; tools<span class="chev">›</span></summary>
+      <div class="setting">
+        <label for="limitInput">Daily profile limit <small>max 80</small></label>
+        <input id="limitInput" type="number" min="1" max="80" step="1" value="40" />
+      </div>
+      <div class="tools">
+        <button id="retryBtn" class="ghost" title="Put failed profiles back in the queue">↻ Retry failed</button>
+        <button id="diagnoseBtn" class="ghost" title="Open one conversation first. Saves a small report file about how the page is built.">🩺 Diagnose page</button>
+      </div>
+      <button id="clearBtn" class="danger">🗑 Clear all data</button>
+    </details>
+
+    <div class="footer">Runs only in your own logged-in browser · data stays on this computer</div>
+  </main>
 
   <!-- Short feedback after pressing a button -->
   <div id="toast" class="toast hidden"></div>

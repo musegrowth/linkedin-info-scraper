@@ -103,6 +103,9 @@ function render(state) {
     let activity = s.activity || 'Working…';
     if (waiting && s.nextActionType === 'next') activity = 'Waiting a random pause before the next profile';
     $('activity').textContent = activity;
+    // Icon: hourglass while waiting, coffee on a long break, gear while working.
+    document.querySelector('.now-icon').textContent =
+      waiting ? (s.nextActionType === 'next' ? '⏳' : '☕') : '⚙️';
     show($('countdown'), !!waiting);
     if (waiting) $('countdown').textContent = formatCountdown(s.nextActionAt - Date.now());
   }
@@ -143,7 +146,9 @@ function render(state) {
   document.querySelectorAll('.full-only').forEach((el) => show(el, !linksOnly));
 
   const total = done + left + failed;
-  $('progressBar').style.width = (total ? Math.round((done / total) * 100) : 0) + '%';
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  $('progressBar').style.width = pct + '%';
+  $('progressPct').textContent = pct + '%';
 
   const today = s.daily && s.daily.date === todayStr() ? s.daily.count : 0;
   const hour = (s.hourly || []).filter((t) => Date.now() - t < 3600 * 1000).length;
