@@ -7,116 +7,124 @@
 </head>
 <body>
 
-  <!-- Header band: name + status badge -->
-  <header class="hero">
+  <!-- Header bar -->
+  <header class="topbar">
     <div class="brand">
       <span class="logo">in</span>
-      <div>
-        <div class="title">Inbox Collector</div>
-        <div class="subtitle">Your LinkedIn contacts → CSV</div>
-      </div>
+      <span class="title">Inbox Collector</span>
     </div>
     <span id="statusPill" class="pill idle"><span class="dot"></span><span id="statusText">Idle</span></span>
   </header>
 
-  <main class="content">
+  <!-- Tabs + Export -->
+  <nav class="tabbar">
+    <button class="tab active" data-tab="collect">COLLECT</button>
+    <button class="tab" data-tab="settings">SETTINGS</button>
+    <div class="export-wrap">
+      <button id="exportMenuBtn" class="outline-btn">⬇ Export</button>
+      <div id="exportMenu" class="menu hidden">
+        <button id="exportLinksBtn" class="menu-item">
+          <span class="mi-title">Names + links</span>
+          <span class="mi-desc">CSV · Name, Profile URL</span>
+        </button>
+        <button id="exportBtn" class="menu-item">
+          <span class="mi-title">Full details</span>
+          <span class="mi-desc">CSV · all columns</span>
+        </button>
+      </div>
+    </div>
+  </nav>
 
-    <!-- Warning banner (security check, failures, daily limit) -->
+  <!-- ===================== COLLECT TAB ===================== -->
+  <main id="tab-collect" class="panel">
+
+    <!-- Warning / info banner -->
     <div id="warning" class="banner hidden"></div>
 
-    <!-- What is happening right now -->
+    <!-- What it is doing right now -->
     <div id="nowCard" class="now hidden">
-      <div class="now-icon">⏳</div>
-      <div class="now-text">
-        <div id="activity" class="activity"></div>
-        <div id="countdown" class="countdown hidden"></div>
-      </div>
+      <span class="now-icon">⏳</span>
+      <span id="activity" class="activity"></span>
+      <span id="countdown" class="countdown hidden"></span>
     </div>
 
     <!-- First-time help -->
-    <section id="getStarted" class="card steps hidden">
-      <div class="card-title"><span class="ct-icon">🚀</span>How to start</div>
-      <ol class="step-list">
-        <li><span class="step-num">1</span><span>Open your <b>LinkedIn Messages</b> page</span></li>
-        <li><span class="step-num">2</span><span>Choose <b>what to collect</b> below</span></li>
-        <li><span class="step-num">3</span><span>Press <b>Start</b> and leave the tab open</span></li>
+    <section id="getStarted" class="section full hidden">
+      <h3>How to start</h3>
+      <ol class="steps">
+        <li><span class="n">1</span><span>Open your <b>LinkedIn Messages</b> page</span></li>
+        <li><span class="n">2</span><span>Choose <b>what to collect</b></span></li>
+        <li><span class="n">3</span><span>Press <b>Start</b> and leave the tab open</span></li>
       </ol>
-      <button id="openMessagesBtn" class="soft small hidden">Open LinkedIn Messages →</button>
+      <button id="openMessagesBtn" class="text-btn hidden">Open LinkedIn Messages →</button>
     </section>
 
-    <!-- Mode choice -->
-    <section class="card">
-      <div class="card-title"><span class="ct-icon">🎯</span>What to collect</div>
-      <div class="modes">
-        <button class="mode" id="modeLinks" data-mode="linksOnly">
-          <span class="mode-check">✓</span>
-          <span class="mode-icon blue">🔗</span>
-          <span class="mode-name">Names + links</span>
-          <span class="mode-desc">Fast · stays on Messages</span>
+    <div class="grid">
+      <!-- Left column: mode -->
+      <section class="section">
+        <h3>What to collect</h3>
+        <button class="item mode" id="modeLinks" data-mode="linksOnly">
+          <span class="radio"></span>
+          <span class="ic ic-blue">🔗</span>
+          <span class="item-text"><span class="item-title">Names + links</span><span class="item-sub">Fast · stays on Messages</span></span>
         </button>
-        <button class="mode" id="modeFull" data-mode="full">
-          <span class="mode-check">✓</span>
-          <span class="mode-icon purple">👤</span>
-          <span class="mode-name">Full profiles</span>
-          <span class="mode-desc">Slow · opens each profile</span>
+        <button class="item mode" id="modeFull" data-mode="full">
+          <span class="radio"></span>
+          <span class="ic ic-purple">👤</span>
+          <span class="item-text"><span class="item-title">Full profiles</span><span class="item-sub">Slow · opens each profile</span></span>
         </button>
-      </div>
-      <div id="modeLock" class="hint hidden">🔒 Pause first to change this.</div>
+        <div id="modeLock" class="note hidden">Pause first to change this.</div>
+      </section>
+
+      <!-- Right column: progress -->
+      <section class="section">
+        <h3>Progress</h3>
+        <div class="row"><span class="ic ic-blue">💬</span><span class="row-label">Conversations</span><span class="row-val" id="statFound">0</span></div>
+        <div class="row"><span class="ic ic-green">🔗</span><span class="row-label">With profile link</span><span class="row-val good" id="statLinks">0</span></div>
+        <div class="row"><span class="ic ic-gray">⤼</span><span class="row-label">Skipped</span><span class="row-val muted" id="statSkipped">0</span></div>
+        <div class="row full-only"><span class="ic ic-green">✓</span><span class="row-label">Profiles done</span><span class="row-val good" id="statDone">0</span></div>
+        <div class="row full-only"><span class="ic ic-blue">⋯</span><span class="row-label">Left to visit</span><span class="row-val" id="statLeft">0</span></div>
+        <div class="row full-only"><span class="ic ic-red">!</span><span class="row-label">Failed</span><span class="row-val bad" id="statFailed">0</span></div>
+      </section>
+    </div>
+
+    <!-- Profile visit bar + today's usage (Full mode only) -->
+    <section class="section full full-only">
+      <div class="bar-head"><span>Profiles visited</span><span id="progressPct">0%</span></div>
+      <div class="bar"><div id="progressBar" class="bar-fill"></div></div>
+      <div class="limits"><span id="todayLine">0 / 40 today</span><span id="hourLine">0 / 15 this hour</span></div>
     </section>
 
-    <!-- The one big button: Start / Continue / Pause -->
     <button id="mainBtn" class="main-btn">▶ Start</button>
 
-    <!-- Progress -->
-    <section class="card">
-      <div class="card-title"><span class="ct-icon">📊</span>Progress</div>
-      <div class="stats">
-        <div class="stat accent-blue"><div class="num" id="statFound">0</div><div class="lbl">Conversations</div></div>
-        <div class="stat accent-green"><div class="num" id="statLinks">0</div><div class="lbl">With profile link</div></div>
-        <div class="stat accent-gray"><div class="num" id="statSkipped">0</div><div class="lbl">Skipped</div></div>
-        <div class="stat accent-green full-only"><div class="num" id="statDone">0</div><div class="lbl">Profiles done</div></div>
-        <div class="stat accent-blue full-only"><div class="num" id="statLeft">0</div><div class="lbl">Left to visit</div></div>
-        <div class="stat accent-red full-only"><div class="num" id="statFailed">0</div><div class="lbl">Failed</div></div>
-      </div>
-      <div class="full-only">
-        <div class="bar-head"><span>Profiles visited</span><span id="progressPct">0%</span></div>
-        <div class="bar"><div id="progressBar" class="bar-fill"></div></div>
-        <div class="limits">
-          <span id="todayLine">0 / 40 today</span>
-          <span id="hourLine">0 / 15 this hour</span>
-        </div>
-      </div>
-    </section>
+    <div class="under-main">
+      <span class="muted-small">Data stays on this computer</span>
+      <button id="clearBtn" class="clear-link">🗑 Clear all data</button>
+    </div>
+  </main>
 
-    <!-- Downloads -->
-    <section class="card">
-      <div class="card-title"><span class="ct-icon">📥</span>Download</div>
-      <div class="downloads">
-        <button id="exportLinksBtn" class="dl" title="Two columns: Name, Profile URL">
-          <span class="dl-icon">⬇</span>
-          <span class="dl-text"><b>Names + links</b><small>2 columns</small></span>
-        </button>
-        <button id="exportBtn" class="dl" title="All columns, all contacts">
-          <span class="dl-icon">⬇</span>
-          <span class="dl-text"><b>Full details</b><small>All columns</small></span>
-        </button>
-      </div>
-      <div class="hint">CSV files open in Excel or Google Sheets.</div>
-    </section>
-
-    <!-- Less-used settings and tools, folded away -->
-    <details class="card more">
-      <summary><span class="ct-icon">⚙️</span>Settings &amp; tools<span class="chev">›</span></summary>
-      <div class="setting">
-        <label for="limitInput">Daily profile limit <small>max 80</small></label>
+  <!-- ===================== SETTINGS TAB ===================== -->
+  <main id="tab-settings" class="panel hidden">
+    <section class="section full">
+      <h3>Limits</h3>
+      <div class="row setting">
+        <span class="ic ic-blue">📅</span>
+        <span class="item-text"><span class="item-title">Daily profile limit</span><span class="item-sub">Full mode only · max 80 per day, 15 per hour</span></span>
         <input id="limitInput" type="number" min="1" max="80" step="1" value="40" />
       </div>
-      <div class="tools">
-        <button id="retryBtn" class="ghost" title="Put failed profiles back in the queue">↻ Retry failed</button>
-        <button id="diagnoseBtn" class="ghost" title="Open one conversation first. Saves a small report file about how the page is built.">🩺 Diagnose page</button>
-      </div>
-      <button id="clearBtn" class="danger">🗑 Clear all data</button>
-    </details>
+    </section>
+
+    <section class="section full">
+      <h3>Tools</h3>
+      <button id="retryBtn" class="item">
+        <span class="ic ic-green">↻</span>
+        <span class="item-text"><span class="item-title">Retry failed</span><span class="item-sub">Put failed profiles back in the queue</span></span>
+      </button>
+      <button id="diagnoseBtn" class="item">
+        <span class="ic ic-purple">🩺</span>
+        <span class="item-text"><span class="item-title">Diagnose page</span><span class="item-sub">Open one conversation first · saves a report file</span></span>
+      </button>
+    </section>
 
     <div class="footer">Runs only in your own logged-in browser · data stays on this computer</div>
   </main>

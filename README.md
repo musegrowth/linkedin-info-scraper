@@ -37,7 +37,7 @@ If you change any file later (for example `selectors.js`), go back to `chrome://
 4. Press the big **▶ Start** button.
 5. Leave that tab open. You can use other tabs and windows. It works best if the LinkedIn tab stays **visible** (for example in its own window). Chrome slows down hidden tabs, which only makes the tool slower.
 6. Press **⏸ Pause** any time. Progress is saved. Next time the big button says **▶ Continue**.
-7. Under **Download**, press **⬇ Names + links** (2 columns: Name, Profile URL) or **⬇ Full details** (all columns).
+7. Click **⬇ Export** (top right) and choose **Names + links** (2 columns: Name, Profile URL) or **Full details** (all columns).
 
 You can only change the mode while the tool is not running. If you collected names + links first and later want the full details, choose **Full profiles** and press Continue. It goes straight to the profile visits without collecting the inbox again.
 
@@ -61,15 +61,12 @@ You can only change the mode while the tool is not running. If you collected nam
 
 | Part | What it shows / does |
 |---|---|
-| Badge (top right) | Idle (grey) · Collecting inbox / Visiting profiles (green) · Paused (amber) · Stopped (red) · Finished (blue) |
-| Banner | Red = security check or repeated failures. Amber = stopped or paused, with the reason. Green = finished. |
-| Blue box | What it is doing right now, plus a countdown while it waits |
-| **What to collect** | The two mode cards (locked while running) |
+| Blue header | Name and status badge: Idle · Collecting inbox / Visiting profiles (green dot) · Paused (amber) · Stopped (red) · Finished |
+| **COLLECT** tab | Banner (warnings, stop reasons, "finished"), what it is doing now plus a countdown, **What to collect** (choose Names + links or Full profiles), **Progress** list, and in Full mode a progress bar with today's / this hour's usage |
 | Big button | **▶ Start** / **▶ Continue** when stopped, **⏸ Pause** when running |
-| **Progress** | Conversations found · with profile link · skipped. Full mode also shows done · left · failed, a progress bar, and today's / this hour's usage. |
-| **⬇ Names + links** | CSV with 2 columns: Name, Profile URL |
-| **⬇ Full details** | CSV with all 14 columns and every conversation |
-| **Settings & tools** (click to open) | Daily profile limit (default 40, max 80) · **↻ Retry failed** · **🩺 Diagnose page** · **🗑 Clear all data** (asks first) |
+| **🗑 Clear all data** | Under the big button. Deletes saved contacts and progress (asks first). |
+| **⬇ Export** (top right) | Opens a menu: **Names + links** (CSV: Name, Profile URL) or **Full details** (CSV: all columns) |
+| **SETTINGS** tab | Daily profile limit (default 40, max 80) · **Retry failed** · **Diagnose page** |
 
 ---
 
@@ -99,9 +96,9 @@ You can only change the mode while the tool is not running. If you collected nam
 
 LinkedIn changes its page design from time to time. When that happens, some fields come back blank, or the inbox list isn't found. All the "where to look" rules are in **one file: `selectors.js`.**
 
-### Easiest way: the "Diagnose this page" button
+### Easiest way: the "Diagnose page" button (SETTINGS tab)
 1. Open LinkedIn Messages and **click one conversation** so it is open on the right.
-2. Click the extension icon and press **Diagnose this page**.
+2. Click the extension icon and open the **SETTINGS** tab and press **Diagnose page**.
 3. A file `linkedin-diagnose-….txt` is saved to your Downloads folder. It lists which selectors find something on your page and every profile link with the page structure around it. It does **not** include your message texts.
 4. Send that file to whoever maintains the selectors (or use it yourself with the steps below).
 
@@ -131,7 +128,7 @@ LinkedIn changes its page design from time to time. When that happens, some fiel
 3. Save the file, go to `chrome://extensions`, and click **reload ↻** on the extension.
 4. Reload the LinkedIn tab and press **Start**.
 
-If a profile fails because of a layout change, press **↻ Retry failed** (in Settings & tools) after fixing it.
+If a profile fails because of a layout change, press **Retry failed** (SETTINGS tab) after fixing it.
 
 ---
 

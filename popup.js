@@ -467,5 +467,24 @@ $('limitInput').addEventListener('change', async () => {
   }
 });
 
+/* ---------------------------- Tabs + Export menu ------------------------ */
+
+// COLLECT / SETTINGS tabs
+document.querySelectorAll('.tab').forEach((tab) => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t === tab));
+    show($('tab-collect'), tab.dataset.tab === 'collect');
+    show($('tab-settings'), tab.dataset.tab === 'settings');
+  });
+});
+
+// "Export" opens a small menu with the two download choices.
+$('exportMenuBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  $('exportMenu').classList.toggle('hidden');
+});
+$('exportMenu').addEventListener('click', () => $('exportMenu').classList.add('hidden'));
+document.addEventListener('click', () => $('exportMenu').classList.add('hidden'));
+
 refresh();
 checkActiveTab();
