@@ -110,6 +110,12 @@ You can only change the mode while the tool is not running. If you used "Names +
 
 LinkedIn changes its page design from time to time. When that happens, some fields come back blank, or the inbox list isn't found. All the "where to look" rules are in **one file: `selectors.js`.**
 
+### Easiest way: the "Diagnose this page" button
+1. Open LinkedIn Messages and **click one conversation** so it is open on the right.
+2. Click the extension icon and press **Diagnose this page**.
+3. A file `linkedin-diagnose-….txt` is saved to your Downloads folder. It lists which selectors find something on your page and every profile link with the page structure around it. It does **not** include your message texts.
+4. Send that file to whoever maintains the selectors (or use it yourself with the steps below).
+
 ### Find out what broke
 1. On the LinkedIn page, right-click → **Inspect** → open the **Console** tab.
 2. Look for yellow lines starting with `[Collector] Selector found nothing for "…"`. The name in quotes (for example `profile.headline`) is the entry to fix in `selectors.js`.

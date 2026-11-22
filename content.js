@@ -273,23 +273,96 @@
     };
   }
 
+  // All elements matching a selector, also inside "shadow" parts of the page
+  // (LinkedIn renders some newer parts that way).
+  function deepQueryAll(selector, root) {
+    root = root || document;
+    const out = Array.from(root.querySelectorAll(selector));
+    root.querySelectorAll('*').forEach((el) => {
+      if (el.shadowRoot) out.push(...deepQueryAll(selector, el.shadowRoot));
+    });
+    return out;
+  }
+
+  // Lower-case, no accents, no punctuation — for comparing names.
+  function normName(s) {
+    return (s || '')
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^\p{L}\p{N} ]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // Does this label belong to this person? ("Jane Doe" matches "View Jane Doe's profile")
+  function nameMatches(label, name) {
+    const L = normName(label);
+    const N = normName(name);
+    if (!L || !N) return false;
+    if (L.includes(N)) return true;
+    const parts = N.split(' ').filter((p) => p.length > 1);
+    return parts.length >= 2 && parts.slice(0, 2).every((p) => L.includes(p));
+  }
+
+  // Everything that describes a link: its text, aria-label, title, photo alt text.
+  function linkLabel(a) {
+    return [
+      a.innerText || '',
+      a.getAttribute('aria-label') || '',
+      a.getAttribute('title') || '',
+      Array.from(a.querySelectorAll('img')).map((i) => i.alt || '').join(' ')
+    ].join(' ');
+  }
+
+  // "Main" readable profile link (/in/jane-doe) vs. LinkedIn's internal id form (/in/ACoAA…).
+  function isReadableProfileUrl(url) {
+    return !!url && !/\/in\/ACo[A-Za-z0-9_-]{10,}/.test(url);
+  }
+
+  function matchesAny(el, list) {
+    return list.some((sel) => {
+      try { return el.matches(sel) || !!el.closest(sel); } catch (e) { return false; }
+    });
+  }
+
   // Finds the other person's profile link in the open conversation.
+  // Looks at EVERY profile link on the page and scores it:
+  //   - known header-link selector ........ +10
+  //   - its text/photo matches the name ...  +8
+  //   - it sits in the conversation header   +4
+  //   - it sits in the conversation area ...  +2
+  //   - it is the readable "main" URL ......  +1
+  // Links in the inbox list, in the top nav bar, or to YOUR own profile are ignored.
   function findThreadProfileLink(name) {
-    const direct = qs(S.thread.profileLink);
-    if (direct) return direct;
-    // Backup: any /in/ link in the conversation whose text matches the name.
+    const ownPhoto = qs(S.ownPhoto);
+    const ownName = ownPhoto ? ownPhoto.getAttribute('alt') || '' : '';
+    const listSel = S.inbox.listItem.join(',');
     const pane = qs(S.thread.pane);
-    if (!pane || !name) return null;
-    const want = name.toLowerCase();
-    for (const a of pane.querySelectorAll('a[href*="/in/"]')) {
-      const label = [
-        a.innerText || '',
-        a.getAttribute('aria-label') || '',
-        Array.from(a.querySelectorAll('img')).map((i) => i.alt || '').join(' ')
-      ].join(' ').toLowerCase();
-      if (label.includes(want)) return a;
+
+    let best = null;
+    let bestScore = 0;
+    for (const a of deepQueryAll('a[href*="/in/"]')) {
+      if (!normalizeProfileUrl(a.href)) continue;
+      try { if (a.closest(listSel)) continue; } catch (e) { /* ignore */ }
+      if (matchesAny(a, S.globalNav)) continue;
+      const label = linkLabel(a);
+      if (ownName && nameMatches(label, ownName) && !(name && nameMatches(label, name))) continue;
+
+      let score = 0;
+      if (S.thread.profileLink.some((sel) => { try { return a.matches(sel); } catch (e) { return false; } })) score += 10;
+      if (name && nameMatches(label, name)) score += 8;
+      if (matchesAny(a, S.thread.headerRegion)) score += 4;
+      if (pane && pane.contains(a)) score += 2;
+      if (isReadableProfileUrl(a.href)) score += 1;
+
+      if (score > bestScore) {
+        best = a;
+        bestScore = score;
+      }
     }
-    return null;
+    // Only accept a link we are fairly sure about (name match or known header link).
+    return bestScore >= 8 ? best : null;
   }
 
   // Opens one conversation and reads the profile link from its header.
@@ -321,7 +394,8 @@
       return;
     }
 
-    const link = findThreadProfileLink(info.name);
+    // The header can appear a moment later than the messages — give it up to 5 s.
+    const link = await waitFor(() => findThreadProfileLink(info.name), 5000);
     if (link) {
       info.profileUrl = normalizeProfileUrl(link.href);
     } else {

@@ -111,6 +111,19 @@ var LIC_SELECTORS = {
       '.msg-title-bar h2'
     ],
 
+    // The top/header part of the open conversation (name, photo, profile card).
+    // A profile link found here gets extra trust.
+    headerRegion: [
+      '.msg-title-bar',
+      '[class*="msg-title-bar"]',
+      '.msg-thread__topcard',
+      '[class*="thread__topcard"]',
+      '.msg-s-profile-card',
+      '[class*="profile-card"]',
+      '.msg-entity-lockup',
+      '[class*="entity-lockup"]'
+    ],
+
     // The whole open-conversation area (used as a last-resort search area
     // for a profile link whose text matches the person's name).
     pane: [
@@ -120,6 +133,12 @@ var LIC_SELECTORS = {
       'main'
     ]
   },
+
+  // LinkedIn's top navigation bar (links in it are never the contact).
+  globalNav: ['#global-nav', '.global-nav', 'header.global-nav'],
+  // Your own photo in the top bar — its alt text is YOUR name, so the tool
+  // never mistakes a link to your own profile for the contact's.
+  ownPhoto: ['img.global-nav__me-photo', '.global-nav__me img', '#global-nav img[alt]'],
 
   // Header text that means "this is a group conversation".
   groupHeaderPattern: /\b\d+\s+participants?\b|\bparticipants\b/i,

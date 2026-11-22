@@ -152,7 +152,13 @@ const SIMPLE_COLUMNS = ['Name', 'Profile URL', 'Conversation URL', 'Last Message
 function buildSimpleCsv(queue) {
   const rows = queue
     .filter((i) => i.profileUrl)
-    .map((i) => [(i.data && i.data.name) || i.name, i.profileUrl, i.conversationUrl, i.lastMessageDate]);
+    // If the profile was visited (Full mode), use the readable "main" URL found there.
+    .map((i) => [
+      (i.data && i.data.name) || i.name,
+      (i.data && i.data.profileUrl) || i.profileUrl,
+      i.conversationUrl,
+      i.lastMessageDate
+    ]);
   const lines = [SIMPLE_COLUMNS, ...rows].map((r) => r.map(csvCell).join(','));
   // \uFEFF = BOM so Excel reads UTF-8 names correctly.
   return { csv: '\uFEFF' + lines.join('\r\n') + '\r\n', count: rows.length };
@@ -255,6 +261,112 @@ $('limitInput').addEventListener('change', async () => {
   if (res && res.ok) {
     $('limitInput').value = res.value;
     showMessage('Daily limit set to ' + res.value + '.');
+  }
+});
+
+/* ---------------------------- Diagnose ---------------------------------- */
+/*
+ * Runs inside the current LinkedIn tab and describes how the page is built:
+ * which selectors from selectors.js find something, and every profile link
+ * on the page with the "class names" around it. It reads only the page
+ * structure plus names/links shown in the header — not your messages.
+ * The result is saved as a .txt file you can send to whoever fixes selectors.
+ */
+function diagnosePage() {
+  const S = typeof LIC_SELECTORS !== 'undefined' ? LIC_SELECTORS : null;
+  const lines = [];
+  const out = (s) => lines.push(s);
+  const short = (s, n) => (s || '').replace(/\s+/g, ' ').trim().slice(0, n || 80);
+  const cls = (el) => (el && el.className && typeof el.className === 'string' ? el.className.trim().replace(/\s+/g, '.') : '');
+  const chain = (el) => {
+    const parts = [];
+    let e = el;
+    for (let i = 0; i < 6 && e && e.tagName; i++) {
+      parts.push(e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (cls(e) ? '.' + cls(e).slice(0, 80) : ''));
+      e = e.parentElement || (e.getRootNode && e.getRootNode().host) || null;
+    }
+    return parts.join('  <  ');
+  };
+  const deepAll = (sel, root) => {
+    root = root || document;
+    let res = [];
+    try { res = Array.from(root.querySelectorAll(sel)); } catch (e) { return res; }
+    root.querySelectorAll('*').forEach((el) => {
+      if (el.shadowRoot) res = res.concat(deepAll(sel, el.shadowRoot));
+    });
+    return res;
+  };
+
+  out('LinkedIn page diagnosis — ' + new Date().toISOString());
+  out('Page path: ' + location.pathname);
+  out('Selectors file loaded: ' + (S ? 'yes' : 'NO (reload the extension and this tab)'));
+  let shadowCount = 0;
+  document.querySelectorAll('*').forEach((el) => { if (el.shadowRoot) shadowCount++; });
+  out('Shadow roots on page: ' + shadowCount);
+  out('');
+
+  if (S) {
+    out('=== Selector check (count found) ===');
+    const groups = { inbox: S.inbox, thread: S.thread, profile: S.profile };
+    Object.keys(groups).forEach((g) => {
+      Object.keys(groups[g]).forEach((k) => {
+        const list = groups[g][k];
+        if (!Array.isArray(list)) return;
+        const counts = list.map((sel) => {
+          let n = 0;
+          try { n = deepAll(sel).length; } catch (e) { n = 'bad'; }
+          return n + ' × ' + sel;
+        });
+        out(g + '.' + k + ':');
+        counts.forEach((c) => out('    ' + c));
+      });
+    });
+    out('');
+  }
+
+  out('=== Every profile link (/in/) on the page ===');
+  const links = deepAll('a[href*="/in/"]');
+  out('Total: ' + links.length);
+  links.slice(0, 40).forEach((a, i) => {
+    const href = a.getAttribute('href') || '';
+    const kind = /\/in\/ACo[A-Za-z0-9_-]{10,}/.test(href) ? 'internal-id link' : 'readable link';
+    const label = short([a.innerText, a.getAttribute('aria-label'), a.getAttribute('title'),
+      Array.from(a.querySelectorAll('img')).map((im) => im.alt).join(' ')].join(' | '), 100);
+    out('#' + (i + 1) + ' [' + kind + '] ' + href.split('?')[0]);
+    out('    label: ' + label);
+    out('    where: ' + chain(a));
+  });
+  out('');
+
+  out('=== Conversation header candidates ===');
+  const headerSel = ['header', '[class*="title-bar"]', '[class*="topcard"]', '[class*="profile-card"]', '[class*="entity-lockup"]', '[class*="thread"] h2'];
+  headerSel.forEach((sel) => {
+    deepAll(sel).slice(0, 4).forEach((el) => {
+      if (el.closest('#global-nav, .global-nav')) return;
+      out('[' + sel + '] ' + chain(el));
+      out('    text: ' + short(el.innerText, 120));
+      out('    html: ' + short(el.outerHTML, 1200));
+    });
+  });
+
+  return lines.join('\n');
+}
+
+$('diagnoseBtn').addEventListener('click', async () => {
+  showMessage('');
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab || !/^https:\/\/www\.linkedin\.com\//.test(tab.url || '')) {
+    return showMessage('Open LinkedIn Messages, click one conversation, then press Diagnose.');
+  }
+  try {
+    const [res] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: diagnosePage });
+    const report = (res && res.result) || 'No result.';
+    const url = URL.createObjectURL(new Blob([report], { type: 'text/plain;charset=utf-8' }));
+    await chrome.downloads.download({ url, filename: 'linkedin-diagnose-' + Date.now() + '.txt' });
+    setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
+    showMessage('Report saved to your Downloads folder.');
+  } catch (e) {
+    showMessage('Diagnose failed: ' + e.message);
   }
 });
 
