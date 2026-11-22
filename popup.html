@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>LinkedIn Inbox Profile Collector</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <h1>Inbox Profile Collector</h1>
+
+  <!-- What the tool is doing right now -->
+  <div class="status-box">
+    <div id="status" class="status">Idle</div>
+    <div id="activity" class="activity"></div>
+  </div>
+
+  <!-- Red/yellow warning (security check, failures) -->
+  <div id="warning" class="warning hidden"></div>
+
+  <!-- Numbers -->
+  <div class="stats">
+    <div id="inboxLine">Inbox: 0 found</div>
+    <div id="profilesLine">Profiles: 0 done, 0 left, 0 skipped, 0 failed</div>
+    <div id="todayLine">0 of 40 today</div>
+    <div id="hourLine" class="muted">This hour: 0 of 15</div>
+  </div>
+
+  <!-- Main controls -->
+  <div class="row">
+    <button id="startBtn" class="primary">Start</button>
+    <button id="pauseBtn">Pause</button>
+  </div>
+  <div class="row">
+    <button id="exportBtn">Export CSV</button>
+    <button id="retryBtn">Retry failed</button>
+  </div>
+
+  <!-- Setting -->
+  <div class="setting">
+    <label for="limitInput">Daily limit (max 80):</label>
+    <input id="limitInput" type="number" min="1" max="80" step="1" value="40" />
+  </div>
+
+  <!-- Short feedback after pressing a button -->
+  <div id="message" class="message"></div>
+
+  <div class="row danger-row">
+    <button id="clearBtn" class="danger">Clear cache</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

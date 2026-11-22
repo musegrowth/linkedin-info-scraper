@@ -1,0 +1,137 @@
+/* popup.css — look of the small window that opens from the toolbar icon. */
+
+body {
+  width: 300px;
+  margin: 0;
+  padding: 12px 14px 14px;
+  font: 13px/1.4 -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  color: #1d2226;
+  background: #fff;
+}
+
+h1 {
+  font-size: 15px;
+  margin: 0 0 10px;
+  color: #0a66c2;
+}
+
+.status-box {
+  background: #f3f6f8;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+
+.status {
+  font-weight: 600;
+}
+
+.activity {
+  color: #56687a;
+  font-size: 12px;
+  margin-top: 2px;
+  word-break: break-word;
+}
+
+.warning {
+  background: #fdecea;
+  border: 1px solid #f5c2bd;
+  color: #a4161a;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.warning.notice {
+  background: #fff8e1;
+  border-color: #f2d98a;
+  color: #7a5b00;
+}
+
+.stats {
+  margin-bottom: 10px;
+}
+
+.stats div {
+  margin: 2px 0;
+}
+
+.muted {
+  color: #56687a;
+  font-size: 12px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+button {
+  flex: 1;
+  padding: 7px 0;
+  border: 1px solid #0a66c2;
+  border-radius: 16px;
+  background: #fff;
+  color: #0a66c2;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: #eaf2fb;
+}
+
+button.primary {
+  background: #0a66c2;
+  color: #fff;
+}
+
+button.primary:hover:not(:disabled) {
+  background: #004182;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.danger-row {
+  margin-top: 6px;
+  margin-bottom: 0;
+}
+
+button.danger {
+  border-color: #b24020;
+  color: #b24020;
+}
+
+button.danger:hover {
+  background: #fbeee9;
+}
+
+.setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 4px 0 8px;
+}
+
+.setting input {
+  width: 60px;
+  padding: 4px;
+  border: 1px solid #a8b4be;
+  border-radius: 4px;
+}
+
+.message {
+  min-height: 16px;
+  font-size: 12px;
+  color: #0a66c2;
+  margin-bottom: 4px;
+}
+
+.hidden {
+  display: none;
+}
